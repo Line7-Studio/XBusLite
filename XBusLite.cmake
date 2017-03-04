@@ -31,6 +31,7 @@ function(xbus_lite_add_client client_name)
     # TODO: add target check here??
     target_sources(${client_name} PRIVATE ${xbus_lite_dir}/src/XBus.cxx)
     target_sources(${client_name} PRIVATE ${xbus_lite_dir}/src/XBus.hxx)
+    target_sources(${client_name} PRIVATE ${xbus_client_host_source_files})
     target_include_directories(${client_name} PRIVATE ${xbus_lite_dir}/src)
 
 endfunction()
@@ -41,6 +42,6 @@ function(xbus_lite_set_client_executable_dir client_name client_host_dir)
     set_target_properties(${client_name}_client PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${client_host_dir})
 endfunction()
 
-function(xbus_lite_set_client_executable_name client_name chient_host_name)
+function(xbus_lite_set_client_executable_name client_name client_host_name)
     set_target_properties(${client_name}_client PROPERTIES RUNTIME_OUTPUT_NAME ${client_host_name})
 endfunction()
