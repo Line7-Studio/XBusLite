@@ -108,6 +108,50 @@ const file_path_t generate_a_random_file_name(const int random_str_len)
     return random_str;
 }
 
+file_path_t check_and_formal_file_path(const file_path_t& file_path)
+{
+#ifdef XBUS_LITE_PLATFORM_WINDOWS
+    auto attr = ::GetFileAttributes(file_path.c_str());
+    if( attr == INVALID_FILE_ATTRIBUTES ){
+        throw std::runtime_error(__FUNCTION__" ::GetFileAttributes Failed");
+    }
+    // see the reference from MSDN
+    file_path_t fixed_file_path;
+    for(uint32_t size = 512; ; size += 512)
+    {
+        fixed_file_path.resize(size);
+        DWORD truncated_size = \
+            ::GetFullPathName( file_path.c_str(), size-2, \
+                const_cast<wchar_t*>(fixed_file_path.data()), 0 \
+            );
+
+        if( truncated_size == 0 ) {
+            throw std::runtime_error(__FUNCTION__" ::GetFullPathName Failed");
+        }
+        if( truncated_size < (size-2) ){
+            fixed_file_path.resize(truncated_size);
+            break;
+        }
+    }
+    return fixed_file_path;
+#else // Not On Windows
+    file_path_t fixed_file_path(PATH_MAX, 0);
+    auto fixed_file_path_ptr = \
+                        ::realpath( \
+                            const_cast<char*>(file_path.c_str()), \
+                            const_cast<char*>(fixed_file_path.c_str()) \
+                        );
+
+    if(fixed_file_path_ptr == nullptr)
+    {
+        printf("%s realpath error: %s\n", __FUNCTION__, strerror(errno));
+        throw std::runtime_error("::realpath failed");
+    }
+    // TODO: need formal??
+    return file_path_t(fixed_file_path_ptr);
+#endif // XBUS_LITE_PLATFORM_WINDOWS
+}
+
 file_path_t get_file_name(file_path_t file_full_path)
 {
 #ifdef XBUS_LITE_PLATFORM_WINDOWS
@@ -994,12 +1038,12 @@ bool InitPythonRuntime(int argc, char const *argv[])
     } // end load
 
 #ifdef XBUS_LITE_PLATFORM_WINDOWS
-    auto python_dll_dir = get_file_located_dir(PythonRuntimeFilePath());
-    auto python_dll_file_name = get_file_name(PythonRuntimeFilePath());
+    auto python_dll_path = check_and_formal_file_path(PythonRuntimeFilePath());
+    auto python_dll_dir = get_file_located_dir(python_dll_path);
+    auto python_dll_file_name = get_file_name(python_dll_path); // without dir
 
-    auto python_zip_file =
-     python_dll_file_name.substr(0, python_dll_file_name.rfind(L"."))
-                           + L".zip";
+    auto python_zip_file = python_dll_file_name.substr(0, \
+                                python_dll_file_name.rfind(L".")) + L".zip";
 
     auto python_lib_path = python_dll_dir + L"\\" + python_zip_file + L";"
                          + python_dll_dir + L"\\Lib;"
@@ -1008,7 +1052,6 @@ bool InitPythonRuntime(int argc, char const *argv[])
     // fix python lib path on Windows
     PyLy->Load<void(*)(const wchar_t*)>("Py_SetPath")(python_lib_path.c_str());
 #endif // XBUS_LITE_PLATFORM_WINDOWS
-
 
 #ifdef XBUS_LITE_PLATFORM_WINDOWS
     ::SetEnvironmentVariable(L"PYTHONIOENCODING", L"UTF-8");
