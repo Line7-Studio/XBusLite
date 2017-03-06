@@ -744,7 +744,7 @@ void CreateClient(const str_t& client_name, \
     DWORD creation_flags = CREATE_UNICODE_ENVIRONMENT;
     creation_flags |= CREATE_BREAKAWAY_FROM_JOB;
     // creation_flags |= DETACHED_PROCESS;
-    // creation_flags |= CREATE_NEW_CONSOLE;
+    creation_flags |= CREATE_NEW_CONSOLE;
 
     // do not forget the space between arguments
     std::wstringstream args;
@@ -1047,6 +1047,7 @@ bool InitPythonRuntime(int argc, char const *argv[])
 
     auto python_lib_path = python_dll_dir + L"\\" + python_zip_file + L";"
                          + python_dll_dir + L"\\Lib;"
+                         + python_dll_dir + L"\\Lib\\site-packages;"
                          + python_dll_dir + L"\\DLLs;";
 
     // fix python lib path on Windows
