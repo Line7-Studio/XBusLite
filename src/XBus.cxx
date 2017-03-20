@@ -28,6 +28,7 @@
     #include <unistd.h>
     #include <sys/mman.h>
     #include <dlfcn.h>     // for dynamic load python
+    // extern char **environ; // posix_spawn environ
 #endif //XBUS_LITE_PLATFORM_WINDOWS
 
 #ifdef XBUS_LITE_PLATFORM_DARWIN
@@ -810,6 +811,7 @@ void CreateClient(const str_t& client_name, \
     auto success = ::posix_spawn(&process_handle, \
                         client_host_executable.c_str(), \
                         &file_actions, nullptr, spawned_args, nullptr);
+                        // &file_actions, nullptr, spawned_args, environ);
 
     posix_spawn_file_actions_destroy(&file_actions);
 
@@ -1015,6 +1017,13 @@ int Python::Eval(const char* source)
 {
     return PYTHON_FUNTIONS::PyRun_SimpleString(source);
 }
+
+// Export To XBusLite For Public API
+int Python::Eval(const std::string& source)
+{
+    return PYTHON_FUNTIONS::PyRun_SimpleString(source.c_str());
+}
+
 
 // do the dynamical load
 bool InitPythonRuntime(int argc, char const *argv[])

@@ -25,10 +25,8 @@ function(xbus_lite_add_client client_name)
     target_sources(${client_name}_client PRIVATE ${xbus_lite_dir}/src/XBus.cxx)
     target_sources(${client_name}_client PRIVATE ${xbus_lite_dir}/src/XBus.hxx)
 
-    target_include_directories(
-        ${client_name}_client PRIVATE ${xbus_lite_dir}/src)
-    target_compile_definitions(
-            ${client_name}_client PRIVATE XBUS_SOURCE_FOR_CLIENT_HOST)
+    target_include_directories(${client_name}_client PRIVATE ${xbus_lite_dir}/src)
+    target_compile_definitions(${client_name}_client PRIVATE XBUS_SOURCE_FOR_CLIENT_HOST)
 
     # TODO: add target check here??
     target_sources(${client_name} PRIVATE ${xbus_lite_dir}/src/XBus.cxx)
@@ -36,30 +34,67 @@ function(xbus_lite_add_client client_name)
     target_sources(${client_name} PRIVATE ${xbus_client_host_source_files})
     target_include_directories(${client_name} PRIVATE ${xbus_lite_dir}/src)
 
+    get_target_property(SERVER_HOST_NAME ${client_name} RUNTIME_OUTPUT_NAME)
+
 endfunction()
 
 
 # export function for public use
 function(xbus_lite_set_client client_name ARG_TYPE)
-    if(${ARG_TYPE} STREQUAL "HOST_DIR")
-        set_target_properties(${client_name}_client PROPERTIES
-                                    RUNTIME_OUTPUT_DIRECTORY ${ARGN})
-    elseif(${ARG_TYPE} STREQUAL "CLIENT_SRC_DIR")
-        get_target_property(CLIENT_HOST_DIR ${client_name}_client
-                                                RUNTIME_OUTPUT_DIRECTORY)
 
-        file(TO_NATIVE_PATH ${CMAKE_CURRENT_BINARY_DIR}/${CLIENT_HOST_DIR} CLIENT_HOST_DIR)
-        file(TO_NATIVE_PATH ${ARGN} CLIENT_SRC_DIR)
+    if(${ARG_TYPE} STREQUAL "EXECUTABLE_DIR")
+        set_target_properties(${client_name}_client
+                                PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ARGN})
+        set(${client_name}_client_EXECUTABLE_DIR ${ARGN} PARENT_SCOPE)
+    endif()
 
-        if(WIN32)
-            execute_process(COMMAND mkdir ${CLIENT_HOST_DIR})
-            execute_process(COMMAND xcopy ${CLIENT_SRC_DIR} ${CLIENT_HOST_DIR} /E /Y)
-        else()
+    if(${ARG_TYPE} STREQUAL "EXECUTABLE_NAME")
+        set_target_properties(${client_name}_client
+                                PROPERTIES RUNTIME_OUTPUT_NAME ${ARGN})
+        set(${client_name}_client_EXECUTABLE_NAME ${ARGN} PARENT_SCOPE)
+    endif()
 
+    if(${ARG_TYPE} STREQUAL "SERVER_CONFIG_FILE")
+        file(WRITE ${ARGN} "[XBUS]\n")
+
+        set(host_file "HOST_FILE=")
+        if(${client_name}_client_EXECUTABLE_DIR})
+            set(client_exe_dir ${${client_name}_client_EXECUTABLE_DIR})
+            set(host_file  "HOST_FILE=${client_exe_dir}/")
         endif()
 
-    elseif(${ARG_TYPE} STREQUAL "EXECUABLE_NAME")
-        set_target_properties(${client_name}_client PROPERTIES
-                                            RUNTIME_OUTPUT_NAME ${ARGN})
+        set(client_exe_name ${${client_name}_client_EXECUTABLE_NAME})
+        set(host_file ${host_file}${client_exe_name})
+
+        file(TO_NATIVE_PATH ${host_file} host_file)
+
+        if(WIN32)
+            file(APPEND ${ARGN} "${host_file}.exe\n")
+        else()
+            file(APPEND ${ARGN} "${host_file}\n")
+        endif()
+
+        file(APPEND ${ARGN} "PYTHON_RUNTIME=${XBUS_PYTHON_RUNTIME}\n")
     endif()
+
+    if(${ARG_TYPE} STREQUAL "SOURCE_COPY_TO")
+        file(MAKE_DIRECTORY ${ARGN})
+        set(${client_name}_client_SOURCE_COPY_TO ${ARGN} PARENT_SCOPE)
+    endif()
+
+
+    if(${ARG_TYPE} STREQUAL "SOURCE_COPY_FROM")
+
+        file(TO_NATIVE_PATH ${${client_name}_client_SOURCE_COPY_TO} COPY_TO_DIR)
+        file(TO_NATIVE_PATH ${ARGN} COPY_FROM_DIR)
+
+        if(WIN32)
+            execute_process(COMMAND xcopy ${COPY_FROM_DIR} ${COPY_TO_DIR} /E /Y)
+        else()
+            execute_process(COMMAND cp -R ${COPY_FROM_DIR}/ ${COPY_TO_DIR}/)
+        endif()
+
+    endif()
+
+
 endfunction()
