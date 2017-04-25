@@ -34,11 +34,11 @@ if "%1"=="GEN_CLIENT_HOST_SRC" goto GEN_CLIENT_HOST_SRC
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 echo bad command! valid command are:
-echo  0:  i/init       [generate xbus project depend files  ]
-echo  1:  b/build      [build the application               ]
-echo  2:  c/clean      [clean generated files               ]
-echo  3:  t/test       [run all unit test                   ]
-echo  4:  p/pack       [pack xbus framework                 ]
+echo  0:  init       [generate xbus project depend files  ]
+echo  1:  build      [build the application               ]
+echo  2:  clean      [clean generated files               ]
+echo  3:  test       [run all unit test                   ]
+echo  4:  pack       [pack xbus framework                 ]
 goto :END
 
 
