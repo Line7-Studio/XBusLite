@@ -58,13 +58,26 @@ for /f "delims== tokens=1,2" %%G in (xbus.xbus) do (
 
 set CC=cl
 set CXX=cl
-set ld=link
+set LD=link
+
+set SUPPORT_WINDOWS_XP=True
+
+if /I %SUPPORT_WINDOWS_XP%==true (
+    set LIB=C:\Program Files ^(x86^)\Microsoft SDKs\Windows\v7.1A\lib;!LIB!
+    set LIBPATH=C:\Program Files ^(x86^)\Microsoft SDKs\Windows\v7.1A\lib;!LIBPATH!
+    set INCLUDE=C:\Program Files ^(x86^)\Microsoft SDKs\Windows\v7.1A\include;!INCLUDE!
+)
 
 set cmake_args=-G Ninja
-if %xbus_build_type%==release (
+
+if /I %xbus_build_type%==release (
     set cmake_args=!cmake_args! -DCMAKE_BUILD_TYPE=Release
 ) else (
     set cmake_args=!cmake_args! -DCMAKE_BUILD_TYPE=Debug
+)
+
+if /I %SUPPORT_WINDOWS_XP%==true (
+    set cmake_args=!cmake_args! -DSUPPORT_WINDOWS_XP=True
 )
 
 echo generate cmake files

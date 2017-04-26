@@ -880,6 +880,7 @@ public:
     :m_handle(::LoadLibrary(library_file_path.c_str()))
     {
         if( m_handle == NULL ){
+            printf("load python shared library failed!\n");
             throw std::runtime_error("load python shared library failed!\n");
         }
     }
@@ -1028,6 +1029,8 @@ int Python::Eval(const std::string& source)
 // do the dynamical load
 bool InitPythonRuntime(int argc, char const *argv[])
 {
+    printf("%s %s\n", __FILE__, __FUNCTION__);
+
     auto PyLy = std::make_unique<DynamicLibraryLoader>(PythonRuntimeFilePath());
 
     {   namespace PF = PYTHON_FUNTIONS;

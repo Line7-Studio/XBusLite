@@ -26,6 +26,10 @@ if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
     add_definitions(-DWIN32)
     add_definitions(-DUNICODE)
 
+    if(SUPPORT_WINDOWS_XP) # Windows XP Support
+        add_definitions(-D_USING_V110_SDK71_)
+    endif()
+
     set(WARNING_FLAGS "/W3")
 
     set(CFLAGS_COMM "/nologo /Zc:wchar_t- /Zc:strictStrings /MP ")
@@ -38,6 +42,10 @@ if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
     set(CXXFLAGS_RELEAE "${CXXFLAGS_COMM} /MD ")
 
     set(LINKFLAGS_COMM "/NOLOGO /DYNAMICBASE /NXCOMPAT /INCREMENTAL:NO /DEBUG ")
+
+    if(SUPPORT_WINDOWS_XP) # Windows XP Support
+        set(LINKFLAGS_COMM "${LINKFLAGS_COMM} /SUBSYSTEM:WINDOWS,\"5.01\"")
+    endif()
 
     set(LINKFLAGS_DEBUG "${LINKFLAGS_COMM}")
     set(LINKFLAGS_RELEASE "${LINKFLAGS_COMM}")
