@@ -1,6 +1,8 @@
 
+
 # store this dir for futher use
 set(xbus_lite_dir ${CMAKE_CURRENT_LIST_DIR})
+
 
 # set compiler and link
 if(CMAKE_SYSTEM_NAME STREQUAL Linux)
@@ -15,55 +17,73 @@ endif()
 
 
 # export function for public use
-function(xbus_lite_add_client client_name)
-    message(STATUS "XBusLite Add Client: ${client_name}")
+function(xbus_add_client_host xbus_server_name keyword_src)
+    if(NOT TARGET ${xbus_server_name})
+        message(FATAL_ERROR "must call xbus_lite_add_host after a existed target")
+    endif()
 
-    # TODO: add file check here
-    set(xbus_client_host_source_files "${ARGN}")
+    if(NOT ${keyword_src} STREQUAL "SOURCE")
+        message(FATAL_ERROR "must call xbus_lite_add_host with keyword `SOURCE`")
+    endif()
 
-    add_executable(${client_name}_client ${xbus_client_host_source_files})
-    target_sources(${client_name}_client PRIVATE ${xbus_lite_dir}/src/XBus.cxx)
-    target_sources(${client_name}_client PRIVATE ${xbus_lite_dir}/src/XBus.hxx)
+    message(STATUS "XBusLite Add Client: ${xbus_server_name}")
 
-    target_include_directories(${client_name}_client PRIVATE ${xbus_lite_dir}/src)
-    target_compile_definitions(${client_name}_client PRIVATE XBUS_SOURCE_FOR_CLIENT_HOST)
+    # check file exist here
+    set(xbus_client_host_source_files ${ARGN})
+    foreach(var ${xbus_client_host_source_files})
+        if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${var})
+            message(FATAL_ERROR "xbus_lite_add_host add none exist file: ${var}")
+        endif()
+    endforeach()
 
-    # TODO: add target check here??
-    target_sources(${client_name} PRIVATE ${xbus_lite_dir}/src/XBus.cxx)
-    target_sources(${client_name} PRIVATE ${xbus_lite_dir}/src/XBus.hxx)
-    target_sources(${client_name} PRIVATE ${xbus_client_host_source_files})
-    target_include_directories(${client_name} PRIVATE ${xbus_lite_dir}/src)
+    add_executable(${xbus_server_name}_xbus_client_host ${xbus_client_host_source_files})
+    target_sources(${xbus_server_name}_xbus_client_host PRIVATE ${xbus_lite_dir}/src/XBus.cxx)
+    target_sources(${xbus_server_name}_xbus_client_host PRIVATE ${xbus_lite_dir}/src/XBus.hxx)
 
-    get_target_property(SERVER_HOST_NAME ${client_name} RUNTIME_OUTPUT_NAME)
+    target_include_directories(${xbus_server_name}_xbus_client_host PRIVATE ${xbus_lite_dir}/src)
+    target_compile_definitions(${xbus_server_name}_xbus_client_host PRIVATE XBUS_SOURCE_FOR_CLIENT_HOST)
+
+    target_sources(${xbus_server_name} PRIVATE ${xbus_lite_dir}/src/XBus.cxx)
+    target_sources(${xbus_server_name} PRIVATE ${xbus_lite_dir}/src/XBus.hxx)
+    target_sources(${xbus_server_name} PRIVATE ${xbus_client_host_source_files})
+    target_include_directories(${xbus_server_name} PRIVATE ${xbus_lite_dir}/src)
+
+    get_target_property(SERVER_HOST_NAME ${xbus_server_name} RUNTIME_OUTPUT_NAME)
+
+    get_property(is_macos_bundle TARGET ${xbus_server_name} PROPERTY MACOSX_BUNDLE)
+    if(${is_macos_bundle})
+        set_target_properties(${xbus_server_name}_xbus_client_host
+            PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${xbus_server_name}.app/Contents/MacOS)
+    endif()
 
 endfunction()
 
 
 # export function for public use
-function(xbus_lite_set_client client_name ARG_TYPE)
+function(xbus_set_client_host xbus_server_name ARG_TYPE)
 
     if(${ARG_TYPE} STREQUAL "EXECUTABLE_DIR")
-        set_target_properties(${client_name}_client
+        set_target_properties(${xbus_server_name}_xbus_client_host
                                 PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ARGN})
-        set(${client_name}_client_EXECUTABLE_DIR ${ARGN} PARENT_SCOPE)
+        set(${xbus_server_name}_client_EXECUTABLE_DIR ${ARGN} PARENT_SCOPE)
     endif()
 
     if(${ARG_TYPE} STREQUAL "EXECUTABLE_NAME")
-        set_target_properties(${client_name}_client
+        set_target_properties(${xbus_server_name}_xbus_client_host
                                 PROPERTIES RUNTIME_OUTPUT_NAME ${ARGN})
-        set(${client_name}_client_EXECUTABLE_NAME ${ARGN} PARENT_SCOPE)
+        set(${xbus_server_name}_client_EXECUTABLE_NAME ${ARGN} PARENT_SCOPE)
     endif()
 
     if(${ARG_TYPE} STREQUAL "SERVER_CONFIG_FILE")
         file(WRITE ${ARGN} "[XBUS]\n")
 
         set(host_file "HOST_FILE=")
-        if(${client_name}_client_EXECUTABLE_DIR})
-            set(client_exe_dir ${${client_name}_client_EXECUTABLE_DIR})
+        if(${xbus_server_name}_client_EXECUTABLE_DIR})
+            set(client_exe_dir ${${xbus_server_name}_client_EXECUTABLE_DIR})
             set(host_file  "HOST_FILE=${client_exe_dir}/")
         endif()
 
-        set(client_exe_name ${${client_name}_client_EXECUTABLE_NAME})
+        set(client_exe_name ${${xbus_server_name}_client_EXECUTABLE_NAME})
         set(host_file ${host_file}${client_exe_name})
 
         file(TO_NATIVE_PATH ${host_file} host_file)
@@ -79,13 +99,13 @@ function(xbus_lite_set_client client_name ARG_TYPE)
 
     if(${ARG_TYPE} STREQUAL "SOURCE_COPY_TO")
         file(MAKE_DIRECTORY ${ARGN})
-        set(${client_name}_client_SOURCE_COPY_TO ${ARGN} PARENT_SCOPE)
+        set(${xbus_server_name}_client_SOURCE_COPY_TO ${ARGN} PARENT_SCOPE)
     endif()
 
 
     if(${ARG_TYPE} STREQUAL "SOURCE_COPY_FROM")
 
-        file(TO_NATIVE_PATH ${${client_name}_client_SOURCE_COPY_TO} COPY_TO_DIR)
+        file(TO_NATIVE_PATH ${${xbus_server_name}_client_SOURCE_COPY_TO} COPY_TO_DIR)
         file(TO_NATIVE_PATH ${ARGN} COPY_FROM_DIR)
 
         if(WIN32)
@@ -95,6 +115,5 @@ function(xbus_lite_set_client client_name ARG_TYPE)
         endif()
 
     endif()
-
 
 endfunction()
