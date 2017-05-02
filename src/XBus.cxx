@@ -896,6 +896,7 @@ public:
     :m_handle(::dlopen(library_file_path.c_str(), RTLD_LAZY))
     {
         if( m_handle == NULL ){
+            printf("load python shared library failed!\n");
             throw std::runtime_error("load python shared library failed!\n");
         }
     }
