@@ -745,7 +745,7 @@ void CreateClient(const str_t& client_name, \
     DWORD creation_flags = CREATE_UNICODE_ENVIRONMENT;
     creation_flags |= CREATE_BREAKAWAY_FROM_JOB;
     // creation_flags |= DETACHED_PROCESS;
-    creation_flags |= CREATE_NEW_CONSOLE;
+    // creation_flags |= CREATE_NEW_CONSOLE;
 
     // do not forget the space between arguments
     std::wstringstream args;
@@ -880,7 +880,7 @@ public:
     :m_handle(::LoadLibrary(library_file_path.c_str()))
     {
         if( m_handle == NULL ){
-            printf("load python shared library failed!\n");
+            wprintf(L"load python shared library failed! %s\n", library_file_path.c_str());
             throw std::runtime_error("load python shared library failed!\n");
         }
     }
@@ -896,7 +896,7 @@ public:
     :m_handle(::dlopen(library_file_path.c_str(), RTLD_LAZY))
     {
         if( m_handle == NULL ){
-            printf("load python shared library failed!\n");
+            printf("load python shared library failed! %s\n", library_file_path.c_str());
             throw std::runtime_error("load python shared library failed!\n");
         }
     }
@@ -1026,9 +1026,8 @@ int Python::Eval(const std::string& source)
     return PYTHON_FUNTIONS::PyRun_SimpleString(source.c_str());
 }
 
-
 // do the dynamical load
-bool InitPythonRuntime(int argc, char const *argv[])
+bool InitPythonRuntime(int argc, char* argv[])
 {
     printf("%s %s\n", __FILE__, __FUNCTION__);
 
@@ -1400,7 +1399,7 @@ void* child_thread_handle_server_termination(void* /*arguments*/)
 }
 #endif // XBUS_LITE_PLATFORM_DARWIN
 
-int ClientHostMain(int argc, char const *argv[])
+int ClientHostMain(int argc, char* argv[])
 {
     printf("%s %s\n", __FILE__, __FUNCTION__);
 
@@ -1591,9 +1590,13 @@ str_t Job::waitForSerializedResult() const
 
 #ifdef XBUS_SOURCE_FOR_CLIENT_HOST
 
-int main(int argc, char const *argv[])
+#ifndef XBUS_SOURCE_FOR_CLIENT_HOST_NO_MAIN
+
+int main(int argc, char* argv[])
 {
     return XBusLite::ClientHostMain(argc, argv);
 }
+
+#endif // XBUS_SOURCE_FOR_CLIENT_HOST_NO_MAIN
 
 #endif // XBUS_SOURCE_FOR_CLIENT_HOST
