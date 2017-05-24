@@ -28,6 +28,8 @@ function(xbus_add_client_host xbus_server_name keyword_src)
 
     message(STATUS "XBusLite Add Client: ${xbus_server_name}")
 
+    get_target_property(server_is_win32 ${xbus_server_name} WIN32_EXECUTABLE)
+
     # check file exist here
     set(xbus_client_host_source_files ${ARGN})
     foreach(var ${xbus_client_host_source_files})
@@ -36,7 +38,13 @@ function(xbus_add_client_host xbus_server_name keyword_src)
         endif()
     endforeach()
 
-    add_executable(${xbus_server_name}_xbus_client_host ${xbus_client_host_source_files})
+    if(server_is_win32)
+        add_executable(${xbus_server_name}_xbus_client_host WIN32 ${xbus_client_host_source_files})
+    else()
+        add_executable(${xbus_server_name}_xbus_client_host ${xbus_client_host_source_files})
+    endif()
+
+
     target_sources(${xbus_server_name}_xbus_client_host PRIVATE ${xbus_lite_dir}/src/XBus.cxx)
     target_sources(${xbus_server_name}_xbus_client_host PRIVATE ${xbus_lite_dir}/src/XBus.hxx)
 
