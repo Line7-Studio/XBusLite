@@ -14,6 +14,8 @@ print_help_doc()
 init_xbus()
 {
     echo ''
+    git submodule init
+    git submodule update
 }
 
 build_xbus()

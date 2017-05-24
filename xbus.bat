@@ -46,6 +46,8 @@ goto :END
 :INIT
 
 mkdir tmp 2>nul
+git submodule init
+git submodule update
 goto :END
 
 
@@ -60,7 +62,7 @@ set CC=cl
 set CXX=cl
 set LD=link
 
-set SUPPORT_WINDOWS_XP=True
+set SUPPORT_WINDOWS_XP=False
 
 if /I %SUPPORT_WINDOWS_XP%==true (
     set LIB=C:\Program Files ^(x86^)\Microsoft SDKs\Windows\v7.1A\lib;!LIB!
