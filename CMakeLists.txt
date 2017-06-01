@@ -5,122 +5,116 @@ project(XBusLite)
 
 enable_testing()
 
-# set compiler and link
-
-if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
-    add_definitions(-DXBUS_LITE_PLATFORM_DARWIN=1)
-endif(CMAKE_SYSTEM_NAME STREQUAL Darwin)
-
-if(CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
-    add_definitions(-DXBUS_LITE_PLATFORM_FREEBSD=1)
-endif(CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
-
-if(CMAKE_SYSTEM_NAME STREQUAL Windows)
-    add_definitions(-DXBUS_LITE_PLATFORM_WINDOWS=1)
-endif(CMAKE_SYSTEM_NAME STREQUAL Windows)
-
-set(CMAKE_CXX_STANDARD 14) # enable c++14 by default
-
-if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
-
-    add_definitions(-DWIN32)
-    add_definitions(-DUNICODE)
-
-    if(SUPPORT_WINDOWS_XP) # Windows XP Support
-        add_definitions(-D_USING_V110_SDK71_)
-    endif()
-
-    set(WARNING_FLAGS "/W3")
-
-    set(CFLAGS_COMM "/nologo /Zc:wchar_t- /Zc:strictStrings /MP ")
-    set(CXXFLAGS_COMM "/nologo /Zc:wchar_t- /Zc:strictStrings /MP /GR /EHsc /std:c++14 ")
-
-    set(CFLAGS_DEBUG "${CFLAGS_COMM} /MDd ")
-    set(CXXFLAGS_DEBUG "${CXXFLAGS_COMM} /MDd ")
-
-    set(CFLAGS_RELEASE "${CFLAGS_COMM} /MD ")
-    set(CXXFLAGS_RELEAE "${CXXFLAGS_COMM} /MD ")
-
-    set(LINKFLAGS_COMM "/NOLOGO /DYNAMICBASE /NXCOMPAT /INCREMENTAL:NO /DEBUG ")
-
-    if(SUPPORT_WINDOWS_XP) # Windows XP Support
-        set(LINKFLAGS_COMM "${LINKFLAGS_COMM} /SUBSYSTEM:WINDOWS,\"5.01\"")
-    endif()
-
-    set(LINKFLAGS_DEBUG "${LINKFLAGS_COMM}")
-    set(LINKFLAGS_RELEASE "${LINKFLAGS_COMM}")
-
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CFLAGS_DEBUG} ${WARNING_FLAGS}")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CXXFLAGS_DEBUG} ${WARNING_FLAGS}")
-    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${LINKFLAGS_DEBUG}")
-
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${CFLAGS_RELEASE} ${WARNING_FLAGS}")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CXXFLAGS_RELEAE} ${WARNING_FLAGS}")
-    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ${LINKFLAGS_RELEASE}")
-
-else() # we thing its gcc or clang
-
-    add_definitions(-DNDEBUG)
-
-    set(WARNING_FLAGS "-Wall")
-
-    set(CFLAGS "-O3 -g")
-    set(CXXFLAGS "-std=c++14 -g")
-
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CFLAGS} ${WARNING_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXXFLAGS} ${WARNING_FLAGS}")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${LINKFLAGS}")
-
-endif()
-
-# add googletest
-# Prevent overriding the parent project's compiler/linker
-# settings on Windows
+# Prevent overriding the parent project's compiler/linker settings on Windows
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-
 add_subdirectory(3rd/googletest)
 
-# set xbus all files
-set(xbus_src_files src/XBus.hxx src/XBus.cxx)
+################################################################################
+include(XBusLite.cmake)
 
 # all unit test
-file(GLOB files LIST_DIRECTORIES true ${CMAKE_CURRENT_SOURCE_DIR}/test/*.cxx)
-foreach(this_test_src_file ${files})
-    get_filename_component(file_name ${this_test_src_file} NAME)
-    if(NOT ${file_name} MATCHES "^([a-zA-Z_]+).cxx$")
-        continue()
-    endif()
+list(APPEND xbus_unit_test "create_client")
+list(APPEND xbus_unit_test "knock_knock")
+list(APPEND xbus_unit_test "task_execution")
 
-    message(">>>> Test: ${this_test_src_file}")
+foreach(this ${xbus_unit_test})
 
-    get_filename_component(file_dir ${this_test_src_file} DIRECTORY)
-    get_filename_component(file_name_we ${this_test_src_file} NAME_WE)
+    add_executable(${this} test/${this}.cxx)
 
-    set(this ${file_name_we})
+    xbus_add_client_host(${this} SOURCE test/${this}.xbus.cxx)
+    xbus_set_client_host(${this} EXECUTABLE_NAME ${this})
+    xbus_set_client_host(${this} EXECUTABLE_DIR xbus_client_host)
 
-    # for the client host, for other project we just need change this
-    set(client_host_src_file ${file_dir}/${file_name_we}.xbus.cxx)
-    # this is where the host will keep in
-    set(client_host_dir xbus_client_host)
-    # this is which the host will be named
-    set(client_host_name ${this})
-    # for the server itself, for other project we just need change this
-    set(server_src_files ${this_test_src_file})
 
-    add_executable(${this}_client ${xbus_src_files} ${client_host_src_file})
-    target_include_directories(${this}_client PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-    target_compile_definitions(${this}_client PRIVATE XBUS_SOURCE_FOR_CLIENT_HOST)
-    if(client_host_dir)
-        set_target_properties(${this}_client PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${client_host_dir})
-    endif()
-    set_target_properties(${this}_client PROPERTIES RUNTIME_OUTPUT_NAME ${client_host_name})
-
-    add_executable(${this} ${xbus_src_files} ${client_host_src_file} ${server_src_files})
-    target_include_directories(${this} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-
-    # if not gtest need, comment next two lines
+    # for google test
     target_link_libraries(${this} gtest)
     target_include_directories(${this} PRIVATE ${gtest_SOURCE_DIR}/include)
 
+    # enable color print
     add_test(${this} ${this} --gtest_color=yes)
+
 endforeach()
+
+
+################################################################################
+# set our c++ compiler
+
+if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
+
+    add_definitions(-DUNICODE)
+    add_definitions(-D_UNICODE)
+
+    set(C_FLAGS_COMM "/nologo /Zc:wchar_t- /Zc:strictStrings /MP /W3")
+    set(CXX_FLAGS_COMM "/nologo /Zc:wchar_t- /Zc:strictStrings /MP /W3 /GR /EHsc /std:c++14")
+
+    set(C_FLAGS_DEBUG "/DDEBUG /MDd")
+    set(CXX_FLAGS_DEBUG "/DDEBUG /MDd")
+
+    set(C_FLAGS_RELEASE "/DNDEBUG /MD")
+    set(CXX_FLAGS_RELEASE "/DNDEBUG /MD")
+
+    set(LINKER_FLAGS_COMM "/NOLOGO /DYNAMICBASE /NXCOMPAT /INCREMENTAL:NO /DEBUG")
+
+    set(LINKER_FLAGS_DEBUG "")
+    set(LINKER_FLAGS_RELEASE "")
+
+else() # we thing its gcc or clang
+
+    set(C_FLAGS_COMM "-Wall")
+    set(CXX_FLAGS_COMM "-Wall -std=c++14")
+
+    set(C_FLAGS_DEBUG "-g")
+    set(CXX_FLAGS_DEBUG "-g")
+
+    set(C_FLAGS_RELEASE "-g -O2")
+    set(CXX_FLAGS_RELEASE "-g -O2")
+
+    set(LINKER_FLAGS_COMM "")
+
+    set(LINKER_FLAGS_DEBUG "")
+    set(LINKER_FLAGS_RELEASE "")
+endif()
+
+
+set(C_FLAGS_DEBUG "${C_FLAGS_DEBUG} ${C_FLAGS_COMM}")
+set(CXX_FLAGS_DEBUG "${CXX_FLAGS_DEBUG} ${CXX_FLAGS_COMM}")
+
+set(C_FLAGS_RELEASE "${C_FLAGS_RELEASE} ${CXX_FLAGS_COMM}")
+set(CXX_FLAGS_RELEASE "${CXX_FLAGS_RELEASE} ${CXX_FLAGS_COMM}")
+
+set(EXE_LINKER_FLAGS_DEBUG "${LINKER_FLAGS_DEBUG} ${LINKER_FLAGS_COMM}")
+set(EXE_LINKER_FLAGS_RELEASE "${LINKER_FLAGS_RELEASE} ${LINKER_FLAGS_COMM}")
+
+# clean predefined
+set(CMAKE_CXX_FLAGS "")
+set(CMAKE_CXX_FLAGS_DEBUG "")
+set(CMAKE_CXX_FLAGS_RELEASE "")
+
+function(formal_and_set_flags flag_name)
+
+    set(${flag_name} "${CMAKE_${flag_name}} ${${flag_name}}")
+    string(STRIP ${${flag_name}} ${flag_name})
+
+    if("${${flag_name}}" STREQUAL "")
+        return()
+    endif()
+
+    string(REPLACE " " ";" ${flag_name} ${${flag_name}})
+    list(SORT ${flag_name})
+    list(REMOVE_DUPLICATES ${flag_name})
+    string(REPLACE ";" " " ${flag_name} "${${flag_name}}")
+    string(STRIP ${${flag_name}} ${flag_name})
+
+    # set the CMAKE_xxx counterpart
+    set(CMAKE_${flag_name} ${${flag_name}} PARENT_SCOPE)
+
+endfunction()
+
+formal_and_set_flags(C_FLAGS_DEBUG)
+formal_and_set_flags(CXX_FLAGS_DEBUG)
+
+formal_and_set_flags(C_FLAGS_RELEASE)
+formal_and_set_flags(CXX_FLAGS_RELEASE)
+
+formal_and_set_flags(EXE_LINKER_FLAGS_DEBUG)
+formal_and_set_flags(EXE_LINKER_FLAGS_RELEASE)
