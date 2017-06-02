@@ -1,5 +1,7 @@
 #! /usr/bin/env bash
 
+XBUS_BUILD_TYPE=release
+
 print_help_doc()
 {
     echo " 0:  init      [generate xbus project depend files     ]"
@@ -20,13 +22,8 @@ init_xbus()
 
 build_xbus()
 {
-    # load xbus.xbus
-    while read line; do
-        eval $line
-    done < xbus.xbus
-
     cmake_args="-G Ninja"
-    if [ "$xbus_build_type" == "release" ]; then
+    if [ "$XBUS_BUILD_TYPE" == "release" ]; then
         cmake_args="$cmake_args -DCMAKE_BUILD_TYPE=Release"
     else
         cmake_args="$cmake_args -DCMAKE_BUILD_TYPE=Debug"

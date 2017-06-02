@@ -1,6 +1,7 @@
 @echo OFF
 setlocal
 
+set XBUS_BUILD_TYPE=release
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :: check needed tool set ok
 
@@ -53,10 +54,6 @@ goto :END
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 :BUILD
-
-for /f "delims== tokens=1,2" %%G in (xbus.xbus) do (
-    set %%G=%%H
-)
 
 set CC=cl
 set CXX=cl
