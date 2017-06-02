@@ -19,11 +19,11 @@ endif()
 # export function for public use
 function(xbus_add_client_host xbus_server_name keyword_src)
     if(NOT TARGET ${xbus_server_name})
-        message(FATAL_ERROR "must call xbus_lite_add_host after a existed target")
+        message(FATAL_ERROR "must call xbus_set_client_host after a existed target")
     endif()
 
     if(NOT ${keyword_src} STREQUAL "SOURCE")
-        message(FATAL_ERROR "must call xbus_lite_add_host with keyword `SOURCE`")
+        message(FATAL_ERROR "must call xbus_set_client_host with keyword `SOURCE`")
     endif()
 
     message(STATUS "XBusLite Add Client: ${xbus_server_name}")
@@ -34,7 +34,7 @@ function(xbus_add_client_host xbus_server_name keyword_src)
     set(xbus_client_host_source_files ${ARGN})
     foreach(var ${xbus_client_host_source_files})
         if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${var})
-            message(FATAL_ERROR "xbus_lite_add_host add none exist file: ${var}")
+            message(FATAL_ERROR "xbus_set_client_host add none exist file: ${var}")
         endif()
     endforeach()
 
@@ -76,11 +76,13 @@ function(xbus_set_client_host xbus_server_name ARG_TYPE)
         set(${xbus_server_name}_client_EXECUTABLE_DIR ${ARGN} PARENT_SCOPE)
     endif()
 
+
     if(${ARG_TYPE} STREQUAL "EXECUTABLE_NAME")
         set_target_properties(${xbus_server_name}_xbus_client_host
                                 PROPERTIES RUNTIME_OUTPUT_NAME ${ARGN})
         set(${xbus_server_name}_client_EXECUTABLE_NAME ${ARGN} PARENT_SCOPE)
     endif()
+
 
     if(${ARG_TYPE} STREQUAL "SERVER_CONFIG_FILE")
         file(WRITE ${ARGN} "[XBUS]\n")
@@ -104,6 +106,72 @@ function(xbus_set_client_host xbus_server_name ARG_TYPE)
 
         file(APPEND ${ARGN} "PYTHON_RUNTIME=${XBUS_PYTHON_RUNTIME}\n")
     endif()
+
+
+    if(${ARG_TYPE} STREQUAL "EMBED_PYTHON_SOURCE")
+        list(LENGTH ARGN argn_lenght)
+
+        set(error_head "xbus_set_client_host EMBED_PYTHON_SOURCE")
+
+        if(NOT ${argn_lenght} EQUAL 4)
+            message(FATAL_ERROR "${error_head} wrong arguments length")
+        endif()
+
+        list(GET ARGN 0 ARGN_0)
+        list(GET ARGN 1 embed_python_source_file)
+        list(GET ARGN 2 ARGN_2)
+        list(GET ARGN 3 embed_python_source_url)
+
+        if(NOT ${ARGN_0} STREQUAL "FILE")
+            message(FATAL_ERROR "${error_head} wrong arguments at index 0")
+        endif()
+
+        if(NOT ${ARGN_2} STREQUAL "URL")
+            message(FATAL_ERROR "${error_head} wrong arguments at index 2")
+        endif()
+
+        get_filename_component(file_path ${embed_python_source_file} ABSOLUTE)
+
+        if(NOT EXISTS ${file_path})
+            message(FATAL_ERROR "${error_head} can not find file ${file_path}")
+        endif()
+
+        set(output_dir ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/bc2so.dir)
+
+        # create generated store file path
+        file(RELATIVE_PATH relative_file_path ${CMAKE_CURRENT_SOURCE_DIR} ${input_file_path})
+
+        set(generated_file_full_path "${output_dir}/resource.cxx")
+
+        string(REPLACE "." "_" generated_depend_name ${generated_file_full_path})
+        string(REPLACE "/" "_" generated_depend_name ${generated_depend_name})
+        string(REPLACE ":" "_" generated_depend_name ${generated_depend_name})
+
+        execute_process(
+            COMMAND ${python_execuatable} ${CMAKE_CURRENT_SOURCE_DIR}/bc2so.py --mode=e
+            OUTPUT_VARIABLE depends_files_list
+        )
+
+        string(STRIP depends_files_list ${depends_files_list})
+        string(REPLACE "\n" ";" depends_files_list ${depends_files_list})
+
+        add_custom_command(
+            OUTPUT    ${generated_file_full_path}
+            COMMAND   ${python_execuatable} ${CMAKE_CURRENT_SOURCE_DIR}/bc2so.py
+            ARGS      --mode=transfrom --out=${generated_file_full_path}
+            DEPENDS   ${depends_files_list}
+            VERBATIM
+        )
+
+        add_custom_target(${generated_depend_name}
+            DEPENDS ${generated_file_full_path}
+        )
+
+        target_sources(xLIBS.Utilities PRIVATE ${generated_file_full_path})
+
+
+    endif()
+
 
     if(${ARG_TYPE} STREQUAL "SOURCE_COPY_TO")
         file(MAKE_DIRECTORY ${ARGN})

@@ -166,14 +166,24 @@ public:
 
 }//namespace Error
 
+class EmbededSourceLoader
+{
+public:
+    EmbededSourceLoader(const std::string& source_url);
+private:
+    std::string source_url_;
+};
+
 struct Python
 {
 #ifdef XBUS_SOURCE_FOR_CLIENT_HOST
     static int Eval(const char* source);
     static int Eval(const std::string& source);
+    static int Eval(const EmbededSourceLoader& source_url);
 #else
     static int Eval(const char* source){return 0;}
     static int Eval(const std::string& source) {return 0;};
+    static int Eval(const EmbededSourceLoader& source_url) {return 0;};
 #endif // XBUS_SOURCE_FOR_CLIENT_HOST
 };
 
@@ -196,6 +206,8 @@ namespace XBus
 
     using XBusLite::Python;
 
+    using XBusLite::EmbededSourceLoader;
+
 }// namespace XBus
 
 #define XBUS_COMBINE_XYZ(X,Y,Z) X##Y##Z
@@ -203,10 +215,11 @@ namespace XBus
 #define XBUS_COMBINE(X,Y,Z) XBUS_COMBINE_XYZ(X,Y,Z)
 #define XBUS_NONE_USED_SYMBOL() XBUS_COMBINE(_,__LINE__,__COUNTER__)
 
-//****************************************************************************//
+
 #define XBUS_REGISTE_CLIENT(name, fun)                                         \
     namespace XBUS_UNIQUE{                                                     \
         auto XBUS_NONE_USED_SYMBOL() =                                         \
             ::XBusLite::ClientNameToInitFunction()[(name)] = fun;              \
     }//namespace XBUS_UNIQUE
-//****************************************************************************//
+
+

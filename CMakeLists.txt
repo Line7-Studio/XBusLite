@@ -21,7 +21,7 @@ foreach(this ${xbus_unit_test})
 
     add_executable(${this} test/${this}.cxx)
 
-    xbus_add_client_host(${this} SOURCE test/${this}.xbus.cxx)
+    xbus_add_client_host(${this} SOURCE test/${this}/${this}.cxx)
     xbus_set_client_host(${this} EXECUTABLE_NAME ${this})
     xbus_set_client_host(${this} EXECUTABLE_DIR xbus_client_host)
 
@@ -33,6 +33,11 @@ foreach(this ${xbus_unit_test})
     add_test(${this} ${this} --gtest_color=yes)
 
 endforeach()
+
+
+xbus_set_client_host(task_execution EMBED_PYTHON_SOURCE
+            FILE test/task_execution/task_execution.py URL ":TaskExecution")
+
 
 
 ################################################################################

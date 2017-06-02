@@ -864,6 +864,11 @@ void WaitClientInitialized(const str_t& client_name)
     }
 }
 
+EmbededSourceLoader::EmbededSourceLoader(const std::string& source_url)
+:source_url_(source_url)
+{
+}
+
 #ifdef XBUS_SOURCE_FOR_CLIENT_HOST
 
 /*
@@ -1024,6 +1029,13 @@ int Python::Eval(const char* source)
 int Python::Eval(const std::string& source)
 {
     return PYTHON_FUNTIONS::PyRun_SimpleString(source.c_str());
+}
+
+// Export To XBusLite For Public API
+int Python::Eval(const EmbededSourceLoader& source_url)
+{
+    // return PYTHON_FUNTIONS::PyRun_SimpleString(source.c_str());
+    return 0;
 }
 
 // do the dynamical load
