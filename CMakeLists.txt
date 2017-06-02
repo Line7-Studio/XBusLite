@@ -25,12 +25,11 @@ foreach(this ${xbus_unit_test})
     xbus_set_client_host(${this} EXECUTABLE_NAME ${this})
     xbus_set_client_host(${this} EXECUTABLE_DIR xbus_client_host)
 
-
-    # for google test
+    # for gtest
     target_link_libraries(${this} gtest)
     target_include_directories(${this} PRIVATE ${gtest_SOURCE_DIR}/include)
 
-    # enable color print
+    # enable gtest color print
     add_test(${this} ${this} --gtest_color=yes)
 
 endforeach()
@@ -45,7 +44,10 @@ if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
     add_definitions(-D_UNICODE)
 
     set(C_FLAGS_COMM "/nologo /Zc:wchar_t- /Zc:strictStrings /MP /W3")
-    set(CXX_FLAGS_COMM "/nologo /Zc:wchar_t- /Zc:strictStrings /MP /W3 /GR /EHsc /std:c++14")
+    set(CXX_FLAGS_COMM "/nologo /Zc:wchar_t- /Zc:strictStrings /MP /W3 /GR /EHsc")
+
+    # enable c++14
+    set(CXX_FLAGS_COMM "${CXX_FLAGS_COMM} /std:c++14")
 
     set(C_FLAGS_DEBUG "/DDEBUG /MDd")
     set(CXX_FLAGS_DEBUG "/DDEBUG /MDd")
@@ -61,7 +63,10 @@ if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
 else() # we thing its gcc or clang
 
     set(C_FLAGS_COMM "-Wall")
-    set(CXX_FLAGS_COMM "-Wall -std=c++14")
+    set(CXX_FLAGS_COMM "-Wall")
+
+    # enable c++14
+    set(CXX_FLAGS_COMM "${CXX_FLAGS_COMM} -std=c++14")
 
     set(C_FLAGS_DEBUG "-g")
     set(CXX_FLAGS_DEBUG "-g")
