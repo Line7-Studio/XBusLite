@@ -35,7 +35,7 @@ bool init_client(std::map<std::string, std::string>& /*args*/)
     printf("%s %s\n", __FILE__, __FUNCTION__);
     XBus::Python::Eval(client_python_source);
 
-    XBus::Python::Eval(XBus::EmbededSourceLoader(":TaskExecution"));
+    XBus::Python::Eval(XBus::EmbededSourceLoader(":EmbededSource"));
 
     return true;
 

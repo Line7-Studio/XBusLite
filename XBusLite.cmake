@@ -17,12 +17,12 @@ endif()
 
 
 # export function for public use
-function(xbus_add_client_host xbus_server_name keyword_src)
+function(xbus_add_client xbus_server_name KEYWORD_SRC)
     if(NOT TARGET ${xbus_server_name})
         message(FATAL_ERROR "must call xbus_set_client_host after a existed target")
     endif()
 
-    if(NOT ${keyword_src} STREQUAL "SOURCE")
+    if(NOT ${KEYWORD_SRC} STREQUAL "SOURCE")
         message(FATAL_ERROR "must call xbus_set_client_host with keyword `SOURCE`")
     endif()
 
@@ -68,19 +68,19 @@ endfunction()
 
 
 # export function for public use
-function(xbus_set_client_host xbus_server_name ARG_TYPE)
+function(xbus_set_client xbus_server_name ARG_TYPE)
+
+    if(${ARG_TYPE} STREQUAL "EXECUTABLE")
+        set_target_properties(${xbus_server_name}_xbus_client_host
+                                PROPERTIES RUNTIME_OUTPUT_NAME ${ARGN})
+        set(${xbus_server_name}_client_EXECUTABLE_NAME ${ARGN} PARENT_SCOPE)
+    endif()
+
 
     if(${ARG_TYPE} STREQUAL "EXECUTABLE_DIR")
         set_target_properties(${xbus_server_name}_xbus_client_host
                                 PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ARGN})
         set(${xbus_server_name}_client_EXECUTABLE_DIR ${ARGN} PARENT_SCOPE)
-    endif()
-
-
-    if(${ARG_TYPE} STREQUAL "EXECUTABLE_NAME")
-        set_target_properties(${xbus_server_name}_xbus_client_host
-                                PROPERTIES RUNTIME_OUTPUT_NAME ${ARGN})
-        set(${xbus_server_name}_client_EXECUTABLE_NAME ${ARGN} PARENT_SCOPE)
     endif()
 
 
@@ -130,36 +130,46 @@ function(xbus_set_client_host xbus_server_name ARG_TYPE)
             message(FATAL_ERROR "${error_head} wrong arguments at index 2")
         endif()
 
-        get_filename_component(file_path ${embed_python_source_file} ABSOLUTE)
+        get_filename_component(input_file_path ${embed_python_source_file} ABSOLUTE)
 
-        if(NOT EXISTS ${file_path})
-            message(FATAL_ERROR "${error_head} can not find file ${file_path}")
+        if(NOT EXISTS ${input_file_path})
+            message(FATAL_ERROR "${error_head} can not find file ${input_file_path}")
         endif()
 
-        set(output_dir ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/bc2so.dir)
+        set(base_output_dir ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY})
+        set(output_dir ${base_output_dir}/xbus_lite.dir/bc2so.dir)
 
         # create generated store file path
         file(RELATIVE_PATH relative_file_path ${CMAKE_CURRENT_SOURCE_DIR} ${input_file_path})
 
-        set(generated_file_full_path "${output_dir}/resource.cxx")
+        # generated file full path
+        get_filename_component(tmp_abs_path ${output_dir}/${relative_file_path} ABSOLUTE)
+
+        get_filename_component(generated_file_dirctory ${tmp_abs_path} DIRECTORY)
+        get_filename_component(generated_file_name ${tmp_abs_path} NAME_WE)
+
+        set(generated_file_full_path "${generated_file_dirctory}/${generated_file_name}.cxx")
 
         string(REPLACE "." "_" generated_depend_name ${generated_file_full_path})
         string(REPLACE "/" "_" generated_depend_name ${generated_depend_name})
         string(REPLACE ":" "_" generated_depend_name ${generated_depend_name})
 
-        execute_process(
-            COMMAND ${python_execuatable} ${CMAKE_CURRENT_SOURCE_DIR}/bc2so.py --mode=e
-            OUTPUT_VARIABLE depends_files_list
-        )
+        #message(">>>>>>>>>>>>>> ${generated_file_full_path}")
+        set(xbus_python_execuatable python3)
 
-        string(STRIP depends_files_list ${depends_files_list})
-        string(REPLACE "\n" ";" depends_files_list ${depends_files_list})
+        #execute_process(
+        #    COMMAND ${xbus_python_execuatable} ${xbus_lite_dir}/bin/bc2so.py
+        #            --file=${input_file_path} --name=${embed_python_source_url}
+        #)
 
         add_custom_command(
             OUTPUT    ${generated_file_full_path}
-            COMMAND   ${python_execuatable} ${CMAKE_CURRENT_SOURCE_DIR}/bc2so.py
-            ARGS      --mode=transfrom --out=${generated_file_full_path}
-            DEPENDS   ${depends_files_list}
+            COMMAND   ${xbus_python_execuatable}
+            ARGS      ${xbus_lite_dir}/bin/bc2so.py
+                      --file ${input_file_path}
+                      --name ${embed_python_source_url}
+                      --output ${generated_file_full_path}
+            DEPENDS   ${input_file_path}
             VERBATIM
         )
 
@@ -167,8 +177,7 @@ function(xbus_set_client_host xbus_server_name ARG_TYPE)
             DEPENDS ${generated_file_full_path}
         )
 
-        target_sources(xLIBS.Utilities PRIVATE ${generated_file_full_path})
-
+        target_sources(${xbus_server_name}_xbus_client_host PRIVATE ${generated_file_full_path})
 
     endif()
 

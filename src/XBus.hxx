@@ -172,6 +172,10 @@ public:
     EmbededSourceLoader(const std::string& source_url);
 private:
     std::string source_url_;
+public:
+    const std::string& url() const {
+        return source_url_;
+    }
 };
 
 struct Python

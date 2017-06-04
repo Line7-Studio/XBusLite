@@ -864,9 +864,41 @@ void WaitClientInitialized(const str_t& client_name)
     }
 }
 
+namespace {
+size_t SourceCodeItemCount;
+std::vector<size_t> SourceCodeNameBlockBufferSize;
+std::vector<const char*> SourceCodeNameBlockBuffer;
+std::vector<size_t> SourceCodeDataBlockBufferSize;
+std::vector<const char*> SourceCodeDataBlockBuffer;
+} // namespace
+
 EmbededSourceLoader::EmbededSourceLoader(const std::string& source_url)
 :source_url_(source_url)
 {
+}
+
+void EmbededSourceInitialize(const unsigned char* resource_struct,
+                             const unsigned char* name_buffer,
+                             const unsigned char* data_buffer)
+{
+    const auto resource_struct_buffer = (size_t*)(resource_struct);
+    auto name_size = *(resource_struct_buffer + 0);
+    auto data_size = *(resource_struct_buffer + 1);
+
+    SourceCodeNameBlockBufferSize.push_back(name_size);
+    SourceCodeNameBlockBuffer.push_back((char*)name_buffer);
+
+    SourceCodeDataBlockBufferSize.push_back(data_size);
+    SourceCodeDataBlockBuffer.push_back((char*)data_buffer);
+
+    SourceCodeItemCount += 1;
+}
+
+void EmbededSourceFinalize(const unsigned char* resource_struct,
+                           const unsigned char* resource_name,
+                           const unsigned char* resource_data)
+{
+
 }
 
 #ifdef XBUS_SOURCE_FOR_CLIENT_HOST
@@ -954,19 +986,30 @@ namespace PYTHON_FUNTIONS
     typedef void PyObject;
     typedef ptrdiff_t Py_ssize_t;
 
-    int (*PyRun_SimpleString)(const char *command);
+    int (*PyRun_SimpleString)(const char* command);
 
-    PyObject* (*PyObject_CallObject)(PyObject *callable_object, PyObject *args);
+    PyObject* (*PyObject_CallObject)(PyObject* callable_object, PyObject* args);
 
     PyObject* (*PyTuple_New)(Py_ssize_t len);
-    int (*PyTuple_SetItem)(PyObject *p, Py_ssize_t pos, PyObject *o);
+    int (*PyTuple_SetItem)(PyObject* p, Py_ssize_t pos, PyObject* o);
 
-    PyObject* (*PyUnicode_FromStringAndSize)(const char *u, Py_ssize_t size);
-    char* (*PyUnicode_AsUTF8AndSize)(PyObject *unicode, Py_ssize_t *size);
+    PyObject* (*PyUnicode_FromStringAndSize)(const char* u, Py_ssize_t size);
+    char* (*PyUnicode_AsUTF8AndSize)(PyObject* unicode, Py_ssize_t* size);
 
-    void (*Py_DecRef)(PyObject *o);
+    PyObject* (*PyMarshal_ReadObjectFromString)(const char* ,Py_ssize_t);
+
+    PyObject* (*PyEval_EvalCode)(PyObject*, PyObject*, PyObject*);
+
+    PyObject* (*PyImport_AddModule)(const char*);
+    PyObject* (*PyModule_GetDict)(PyObject*);
+
+    void (*Py_IncRef)(PyObject*);
+    void (*Py_DecRef)(PyObject*);
 
 }// PYTHON_FUNTIONS
+
+void* MODULE_MAIN_DICT;
+void* MODULE_XBUS_DICT;
 
 void Py_Run_Txt(const char* txt) {
     if( 0 != PYTHON_FUNTIONS::PyRun_SimpleString(txt) ){
@@ -1032,9 +1075,36 @@ int Python::Eval(const std::string& source)
 }
 
 // Export To XBusLite For Public API
-int Python::Eval(const EmbededSourceLoader& source_url)
+int Python::Eval(const EmbededSourceLoader& source_loader)
 {
     // return PYTHON_FUNTIONS::PyRun_SimpleString(source.c_str());
+
+    auto source_url = source_loader.url();
+
+    size_t SourceCodeIndex = 0;
+    for ( ; SourceCodeIndex < SourceCodeItemCount; ++SourceCodeIndex)
+    {
+        auto name_buffer = SourceCodeNameBlockBuffer[SourceCodeIndex];
+        auto name_size = SourceCodeNameBlockBufferSize[SourceCodeIndex];
+        if( source_url.compare(0, name_size, name_buffer) == 0 ){
+            break;
+        }
+    }
+    if( SourceCodeIndex == SourceCodeItemCount ){
+        throw std::runtime_error("Python::Eval Try to Call None Exists Code");
+    }
+
+    auto code_object = PYTHON_FUNTIONS::PyMarshal_ReadObjectFromString(
+            SourceCodeDataBlockBuffer[SourceCodeIndex],
+            SourceCodeDataBlockBufferSize[SourceCodeIndex]
+        );
+
+    auto result_object = PYTHON_FUNTIONS::PyEval_EvalCode( \
+                        code_object, MODULE_MAIN_DICT, MODULE_MAIN_DICT );
+
+    PYTHON_FUNTIONS::Py_DecRef(result_object);
+    PYTHON_FUNTIONS::Py_DecRef(code_object);
+
     return 0;
 }
 
@@ -1056,6 +1126,14 @@ bool InitPythonRuntime(int argc, char* argv[])
         X_LOAD_PY_FUN_PTR(PyTuple_SetItem);
         X_LOAD_PY_FUN_PTR(PyUnicode_FromStringAndSize);
         X_LOAD_PY_FUN_PTR(PyUnicode_AsUTF8AndSize);
+
+        X_LOAD_PY_FUN_PTR(PyMarshal_ReadObjectFromString);
+        X_LOAD_PY_FUN_PTR(PyEval_EvalCode);
+
+        X_LOAD_PY_FUN_PTR(PyImport_AddModule);
+        X_LOAD_PY_FUN_PTR(PyModule_GetDict);
+
+        X_LOAD_PY_FUN_PTR(Py_IncRef);
         X_LOAD_PY_FUN_PTR(Py_DecRef);
 
         #undef X_LOAD_PY_FUN_PTR
@@ -1087,13 +1165,19 @@ bool InitPythonRuntime(int argc, char* argv[])
     // init python
     PyLy->Load<void(*)(void)>("Py_Initialize")();
 
+    auto module_main = PYTHON_FUNTIONS::PyImport_AddModule("__main__");
+    PYTHON_FUNTIONS::Py_IncRef(module_main);
+
+    MODULE_MAIN_DICT = PYTHON_FUNTIONS::PyModule_GetDict(module_main);
+
     // add moduel xbus for next runing XBUS_MODULE_TXT
-    auto module_xbus_dict = PyLy->Load<void*(*)(void*)>("PyModule_GetDict")( \
-                    PyLy->Load<void*(*)(const char*)>("PyImport_AddModule")("xbus")
-                );
+    auto module_xbus = PYTHON_FUNTIONS::PyImport_AddModule("xbus");
+    PYTHON_FUNTIONS::Py_IncRef(module_xbus);
+
+    MODULE_XBUS_DICT = PYTHON_FUNTIONS::PyModule_GetDict(module_xbus);
 
     // in XBUS_MODULE_TXT we defined xbus module function
-    PyLy->Load<int(*)(const char*)>("PyRun_SimpleString")(XBUS_MODULE_TXT);
+    PYTHON_FUNTIONS::PyRun_SimpleString(XBUS_MODULE_TXT);
 
     // get and store the xbus funtions
     auto py_get_dict_item = \
@@ -1101,12 +1185,12 @@ bool InitPythonRuntime(int argc, char* argv[])
 
     // funtion for : __execute_json_serialized_no_parameters_function__
     PY_FUN_PTR_EXECUTE_JSON_SERIALIZED_NO_PARAMETERS_FUNCTION = \
-                    py_get_dict_item( module_xbus_dict, \
+                    py_get_dict_item( MODULE_XBUS_DICT, \
                         "__execute_json_serialized_no_parameters_function__"
                 );
     // funtion for : __execute_json_serialized_with_parameters_function__
     PY_FUN_PTR_EXECUTE_JSON_SERIALIZED_WITH_PARAMETERS_FUNCTION = \
-                    py_get_dict_item( module_xbus_dict, \
+                    py_get_dict_item( MODULE_XBUS_DICT, \
                         "__execute_json_serialized_with_parameters_function__"
                 );
 
