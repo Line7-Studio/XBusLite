@@ -17,6 +17,75 @@ endif()
 
 
 # export function for public use
+function(xbus_embed_source_code target_name)
+
+    list(LENGTH ARGN argn_lenght)
+
+    set(error_head "xbus_embed_source_code EMBED_PYTHON_SOURCE")
+
+    if(NOT ${argn_lenght} EQUAL 4)
+        message(FATAL_ERROR "${error_head} wrong arguments length")
+    endif()
+
+    list(GET ARGN 0 ARGN_0)
+    list(GET ARGN 1 embed_python_source_file)
+    list(GET ARGN 2 ARGN_2)
+    list(GET ARGN 3 embed_python_source_url)
+
+    if(NOT ${ARGN_0} STREQUAL "FILE")
+        message(FATAL_ERROR "${error_head} wrong arguments at index 0")
+    endif()
+
+    if(NOT ${ARGN_2} STREQUAL "URL")
+        message(FATAL_ERROR "${error_head} wrong arguments at index 2")
+    endif()
+
+    get_filename_component(input_file_path ${embed_python_source_file} ABSOLUTE)
+
+    if(NOT EXISTS ${input_file_path})
+        message(FATAL_ERROR "${error_head} can not find file ${input_file_path}")
+    endif()
+
+    set(base_output_dir ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY})
+    set(output_dir ${base_output_dir}/xbus_lite.dir/bc2so.dir)
+
+    # create generated store file path
+    file(RELATIVE_PATH relative_file_path ${CMAKE_CURRENT_SOURCE_DIR} ${input_file_path})
+
+    # generated file full path
+    get_filename_component(tmp_abs_path ${output_dir}/${relative_file_path} ABSOLUTE)
+
+    get_filename_component(generated_file_dirctory ${tmp_abs_path} DIRECTORY)
+    get_filename_component(generated_file_name ${tmp_abs_path} NAME_WE)
+
+    set(generated_file_full_path "${generated_file_dirctory}/${generated_file_name}.cxx")
+
+    string(REPLACE "." "_" generated_depend_name ${generated_file_full_path})
+    string(REPLACE "/" "_" generated_depend_name ${generated_depend_name})
+    string(REPLACE ":" "_" generated_depend_name ${generated_depend_name})
+
+    add_custom_command(
+        OUTPUT    ${generated_file_full_path}
+        COMMAND   ${xbus_python_executable}
+        ARGS      ${xbus_lite_dir}/bin/bc2so.py
+                  --file ${input_file_path}
+                  --name ${embed_python_source_url}
+                  --output ${generated_file_full_path}
+        DEPENDS   ${input_file_path}
+        VERBATIM
+    )
+
+    add_custom_target(${generated_depend_name}
+        DEPENDS ${generated_file_full_path}
+    )
+
+    target_sources(${target_name} PRIVATE ${generated_file_full_path})
+
+endfunction()
+
+
+
+# export function for public use
 function(xbus_add_client xbus_server_name KEYWORD_SRC)
     if(NOT TARGET ${xbus_server_name})
         message(FATAL_ERROR "must call xbus_set_client_host after a existed target")
@@ -109,76 +178,9 @@ function(xbus_set_client xbus_server_name ARG_TYPE)
 
 
     if(${ARG_TYPE} STREQUAL "EMBED_PYTHON_SOURCE")
-        list(LENGTH ARGN argn_lenght)
-
-        set(error_head "xbus_set_client_host EMBED_PYTHON_SOURCE")
-
-        if(NOT ${argn_lenght} EQUAL 4)
-            message(FATAL_ERROR "${error_head} wrong arguments length")
-        endif()
-
-        list(GET ARGN 0 ARGN_0)
-        list(GET ARGN 1 embed_python_source_file)
-        list(GET ARGN 2 ARGN_2)
-        list(GET ARGN 3 embed_python_source_url)
-
-        if(NOT ${ARGN_0} STREQUAL "FILE")
-            message(FATAL_ERROR "${error_head} wrong arguments at index 0")
-        endif()
-
-        if(NOT ${ARGN_2} STREQUAL "URL")
-            message(FATAL_ERROR "${error_head} wrong arguments at index 2")
-        endif()
-
-        get_filename_component(input_file_path ${embed_python_source_file} ABSOLUTE)
-
-        if(NOT EXISTS ${input_file_path})
-            message(FATAL_ERROR "${error_head} can not find file ${input_file_path}")
-        endif()
-
-        set(base_output_dir ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY})
-        set(output_dir ${base_output_dir}/xbus_lite.dir/bc2so.dir)
-
-        # create generated store file path
-        file(RELATIVE_PATH relative_file_path ${CMAKE_CURRENT_SOURCE_DIR} ${input_file_path})
-
-        # generated file full path
-        get_filename_component(tmp_abs_path ${output_dir}/${relative_file_path} ABSOLUTE)
-
-        get_filename_component(generated_file_dirctory ${tmp_abs_path} DIRECTORY)
-        get_filename_component(generated_file_name ${tmp_abs_path} NAME_WE)
-
-        set(generated_file_full_path "${generated_file_dirctory}/${generated_file_name}.cxx")
-
-        string(REPLACE "." "_" generated_depend_name ${generated_file_full_path})
-        string(REPLACE "/" "_" generated_depend_name ${generated_depend_name})
-        string(REPLACE ":" "_" generated_depend_name ${generated_depend_name})
-
-        #message(">>>>>>>>>>>>>> ${generated_file_full_path}")
-        set(xbus_python_execuatable python3)
-
-        #execute_process(
-        #    COMMAND ${xbus_python_execuatable} ${xbus_lite_dir}/bin/bc2so.py
-        #            --file=${input_file_path} --name=${embed_python_source_url}
-        #)
-
-        add_custom_command(
-            OUTPUT    ${generated_file_full_path}
-            COMMAND   ${xbus_python_execuatable}
-            ARGS      ${xbus_lite_dir}/bin/bc2so.py
-                      --file ${input_file_path}
-                      --name ${embed_python_source_url}
-                      --output ${generated_file_full_path}
-            DEPENDS   ${input_file_path}
-            VERBATIM
-        )
-
-        add_custom_target(${generated_depend_name}
-            DEPENDS ${generated_file_full_path}
-        )
-
-        target_sources(${xbus_server_name}_xbus_client_host PRIVATE ${generated_file_full_path})
-
+        xbus_embed_source_code(${xbus_server_name}_xbus_client_host
+            ${ARGN}
+            )
     endif()
 
 

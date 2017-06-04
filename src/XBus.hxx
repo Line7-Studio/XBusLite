@@ -180,15 +180,11 @@ public:
 
 struct Python
 {
-#ifdef XBUS_SOURCE_FOR_CLIENT_HOST
     static int Eval(const char* source);
     static int Eval(const std::string& source);
     static int Eval(const EmbededSourceLoader& source_url);
-#else
-    static int Eval(const char* source){return 0;}
-    static int Eval(const std::string& source) {return 0;};
-    static int Eval(const EmbededSourceLoader& source_url) {return 0;};
-#endif // XBUS_SOURCE_FOR_CLIENT_HOST
+
+    static int Initialize();
 };
 
 }// namespace XBusLite

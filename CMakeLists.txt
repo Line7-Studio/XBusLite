@@ -12,6 +12,12 @@ add_subdirectory(3rd/googletest)
 ################################################################################
 include(XBusLite.cmake)
 
+if(CMAKE_SYSTEM_NAME STREQUAL Windows)
+    set(xbus_python_executable ${CMAKE_CURRENT_SOURCE_DIR}/tmp/build_win/Python/python)
+else()
+    set(xbus_python_executable python3)
+endif()
+
 # all unit test
 list(APPEND xbus_unit_test "create_client")
 list(APPEND xbus_unit_test "knock_knock")

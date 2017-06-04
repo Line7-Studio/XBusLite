@@ -901,13 +901,6 @@ void EmbededSourceFinalize(const unsigned char* resource_struct,
 
 }
 
-#ifdef XBUS_SOURCE_FOR_CLIENT_HOST
-
-/*
- store the CommunicationTube from client side
- */
-static CommunicationTube* ClientCommunicationTube = nullptr;
-
 class DynamicLibraryLoader
 {
 #ifdef XBUS_LITE_PLATFORM_WINDOWS
@@ -945,42 +938,6 @@ public:
 #endif // XBUS_LITE_PLATFORM_WINDOWS
 };
 
-void* PY_FUN_PTR_EXECUTE_JSON_SERIALIZED_NO_PARAMETERS_FUNCTION;
-void* PY_FUN_PTR_EXECUTE_JSON_SERIALIZED_WITH_PARAMETERS_FUNCTION;
-
-static const char* XBUS_MODULE_TXT = R"(
-
-import xbus
-import json as xbus_json
-
-xbus.declare = type('xbus.declare', (object, ), {})()
-
-xbus.__declared_functions__ = {}
-
-def function(real_function):
-    def xbus_function_wrapper(*args, **kwargs):
-        return real_function(*args, **kwargs)
-    xbus.__declared_functions__[real_function.__name__] = xbus_function_wrapper
-    return real_function
-
-xbus.declare.function = function
-
-def function(fun_name: str):
-    return xbus_json.dumps(xbus.__declared_functions__[fun_name]())
-
-xbus.__execute_json_serialized_no_parameters_function__ = function
-
-def function(fun_name: str, fun_para: str):
-    return xbus_json.dumps( \
-             xbus.__declared_functions__[fun_name](xbus_json.loads(fun_para)))
-
-xbus.__execute_json_serialized_with_parameters_function__ = function
-
-del function
-
-)";
-
-
 namespace PYTHON_FUNTIONS
 {
     typedef void PyObject;
@@ -999,6 +956,8 @@ namespace PYTHON_FUNTIONS
     PyObject* (*PyMarshal_ReadObjectFromString)(const char* ,Py_ssize_t);
 
     PyObject* (*PyEval_EvalCode)(PyObject*, PyObject*, PyObject*);
+
+    PyObject* (*PyDict_GetItemString)(PyObject*, const char*);
 
     PyObject* (*PyImport_AddModule)(const char*);
     PyObject* (*PyModule_GetDict)(PyObject*);
@@ -1077,8 +1036,6 @@ int Python::Eval(const std::string& source)
 // Export To XBusLite For Public API
 int Python::Eval(const EmbededSourceLoader& source_loader)
 {
-    // return PYTHON_FUNTIONS::PyRun_SimpleString(source.c_str());
-
     auto source_url = source_loader.url();
 
     size_t SourceCodeIndex = 0;
@@ -1108,10 +1065,10 @@ int Python::Eval(const EmbededSourceLoader& source_loader)
     return 0;
 }
 
-// do the dynamical load
-bool InitPythonRuntime(int argc, char* argv[])
+// Export To XBusLite For Public API
+int Python::Initialize()
 {
-    printf("%s %s\n", __FILE__, __FUNCTION__);
+    // printf("%s %s\n", __FILE__, __FUNCTION__);
 
     auto PyLy = std::make_unique<DynamicLibraryLoader>(PythonRuntimeFilePath());
 
@@ -1120,18 +1077,22 @@ bool InitPythonRuntime(int argc, char* argv[])
         #define X_LOAD_PY_FUN_PTR(X) \
             PF::X = PyLy->Load<decltype(PF::X)>(#X);
 
-        X_LOAD_PY_FUN_PTR(PyRun_SimpleString);
-        X_LOAD_PY_FUN_PTR(PyObject_CallObject);
         X_LOAD_PY_FUN_PTR(PyTuple_New);
         X_LOAD_PY_FUN_PTR(PyTuple_SetItem);
+
         X_LOAD_PY_FUN_PTR(PyUnicode_FromStringAndSize);
         X_LOAD_PY_FUN_PTR(PyUnicode_AsUTF8AndSize);
 
         X_LOAD_PY_FUN_PTR(PyMarshal_ReadObjectFromString);
+
         X_LOAD_PY_FUN_PTR(PyEval_EvalCode);
+        X_LOAD_PY_FUN_PTR(PyRun_SimpleString);
+        X_LOAD_PY_FUN_PTR(PyObject_CallObject);
 
         X_LOAD_PY_FUN_PTR(PyImport_AddModule);
         X_LOAD_PY_FUN_PTR(PyModule_GetDict);
+
+        X_LOAD_PY_FUN_PTR(PyDict_GetItemString);
 
         X_LOAD_PY_FUN_PTR(Py_IncRef);
         X_LOAD_PY_FUN_PTR(Py_DecRef);
@@ -1170,6 +1131,58 @@ bool InitPythonRuntime(int argc, char* argv[])
 
     MODULE_MAIN_DICT = PYTHON_FUNTIONS::PyModule_GetDict(module_main);
 
+    return 0;
+}
+
+#ifdef XBUS_SOURCE_FOR_CLIENT_HOST
+
+/*
+ store the CommunicationTube from client side
+ */
+static CommunicationTube* ClientCommunicationTube = nullptr;
+
+void* PY_FUN_PTR_EXECUTE_JSON_SERIALIZED_NO_PARAMETERS_FUNCTION;
+void* PY_FUN_PTR_EXECUTE_JSON_SERIALIZED_WITH_PARAMETERS_FUNCTION;
+
+static const char* XBUS_MODULE_TXT = R"(
+
+import xbus
+import json as xbus_json
+
+xbus.declare = type('xbus.declare', (object, ), {})()
+
+xbus.__declared_functions__ = {}
+
+def function(real_function):
+    def xbus_function_wrapper(*args, **kwargs):
+        return real_function(*args, **kwargs)
+    xbus.__declared_functions__[real_function.__name__] = xbus_function_wrapper
+    return real_function
+
+xbus.declare.function = function
+
+def function(fun_name: str):
+    return xbus_json.dumps(xbus.__declared_functions__[fun_name]())
+
+xbus.__execute_json_serialized_no_parameters_function__ = function
+
+def function(fun_name: str, fun_para: str):
+    return xbus_json.dumps( \
+             xbus.__declared_functions__[fun_name](xbus_json.loads(fun_para)))
+
+xbus.__execute_json_serialized_with_parameters_function__ = function
+
+del function
+
+)";
+
+// do the dynamical load
+bool InitPythonRuntime(int argc, char* argv[])
+{
+    printf("%s %s\n", __FILE__, __FUNCTION__);
+
+    Python::Initialize();
+
     // add moduel xbus for next runing XBUS_MODULE_TXT
     auto module_xbus = PYTHON_FUNTIONS::PyImport_AddModule("xbus");
     PYTHON_FUNTIONS::Py_IncRef(module_xbus);
@@ -1179,18 +1192,14 @@ bool InitPythonRuntime(int argc, char* argv[])
     // in XBUS_MODULE_TXT we defined xbus module function
     PYTHON_FUNTIONS::PyRun_SimpleString(XBUS_MODULE_TXT);
 
-    // get and store the xbus funtions
-    auto py_get_dict_item = \
-            PyLy->Load<void*(*)(void*,const char*)>("PyDict_GetItemString");
-
     // funtion for : __execute_json_serialized_no_parameters_function__
     PY_FUN_PTR_EXECUTE_JSON_SERIALIZED_NO_PARAMETERS_FUNCTION = \
-                    py_get_dict_item( MODULE_XBUS_DICT, \
+                PYTHON_FUNTIONS::PyDict_GetItemString( MODULE_XBUS_DICT, \
                         "__execute_json_serialized_no_parameters_function__"
                 );
     // funtion for : __execute_json_serialized_with_parameters_function__
     PY_FUN_PTR_EXECUTE_JSON_SERIALIZED_WITH_PARAMETERS_FUNCTION = \
-                    py_get_dict_item( MODULE_XBUS_DICT, \
+                PYTHON_FUNTIONS::PyDict_GetItemString( MODULE_XBUS_DICT, \
                         "__execute_json_serialized_with_parameters_function__"
                 );
 
