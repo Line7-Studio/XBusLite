@@ -993,13 +993,18 @@ namespace PYTHON
 
     PyObject* XBusLoadModule(PyObject* self, PyObject* arg)
     {
-        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
-
         Py_IncRef(arg);
-
         auto size = PyUnicode_GetLength(arg);
         auto buffer = PyUnicode_AsUCS4Copy(arg);
+
+    #ifdef _MSC_VER
+        std::wstring_convert< std::codecvt_utf8<int32_t>, int32_t > conv;
+        auto name = conv.to_bytes(reinterpret_cast<const int32_t*>(std::u32string(buffer, size).data()));
+    #else
+        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
         auto name = conv.to_bytes(std::u32string(buffer, size));
+    #endif // _MSC_VER
+
         PyMem_Free(buffer);
 
         size_t source_code_index = 0;
