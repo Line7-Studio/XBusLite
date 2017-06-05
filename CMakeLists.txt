@@ -13,7 +13,7 @@ add_subdirectory(3rd/googletest)
 include(XBusLite.cmake)
 
 if(CMAKE_SYSTEM_NAME STREQUAL Windows)
-    set(xbus_python_executable ${CMAKE_CURRENT_SOURCE_DIR}/tmp/build_win/Python/python)
+    set(xbus_python_executable E:/Python/3.6/x64/python)
 else()
     set(xbus_python_executable python3)
 endif()
