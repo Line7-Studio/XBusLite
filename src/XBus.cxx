@@ -938,13 +938,26 @@ public:
 #endif // XBUS_LITE_PLATFORM_WINDOWS
 };
 
-namespace PYTHON_FUNTIONS
+namespace PYTHON
 {
     typedef void PyObject;
+    typedef char32_t Py_UCS4;
     typedef ptrdiff_t Py_ssize_t;
+    typedef PyObject* (*PyCFunction)(PyObject* self, PyObject* args);
+
+    struct PyMethodDef {
+        const char  *ml_name = nullptr; /* The name of the built-in function/method */
+        PyCFunction ml_meth;            /* The C function that implements it */
+        int         ml_flags;           /* Combination of METH_xxx flags, which mostly
+                                           describe the args expected by the C func */
+        const char  *ml_doc;            /* The __doc__ attribute, or NULL */
+    };
+
+    typedef struct PyMethodDef PyMethodDef;
 
     int (*PyRun_SimpleString)(const char* command);
 
+    int (*PyObject_Print)(PyObject *o, FILE *fp, int flags);
     PyObject* (*PyObject_CallObject)(PyObject* callable_object, PyObject* args);
 
     PyObject* (*PyTuple_New)(Py_ssize_t len);
@@ -952,32 +965,84 @@ namespace PYTHON_FUNTIONS
 
     PyObject* (*PyUnicode_FromStringAndSize)(const char* u, Py_ssize_t size);
     char* (*PyUnicode_AsUTF8AndSize)(PyObject* unicode, Py_ssize_t* size);
+    Py_ssize_t (*PyUnicode_GetLength)(PyObject* unicode);
+    Py_UCS4* (*PyUnicode_AsUCS4Copy)(PyObject* unicode);
 
-    PyObject* (*PyMarshal_ReadObjectFromString)(const char* ,Py_ssize_t);
+    PyObject* (*PyMarshal_ReadObjectFromString)(const char*, Py_ssize_t);
 
     PyObject* (*PyEval_EvalCode)(PyObject*, PyObject*, PyObject*);
 
     PyObject* (*PyDict_GetItemString)(PyObject*, const char*);
 
     PyObject* (*PyImport_AddModule)(const char*);
+    PyObject* (*PyImport_ExecCodeModule)(const char* name, PyObject* co);
+    PyObject* (*PyImport_ExecCodeModuleObject)( \
+            PyObject *name, PyObject *co, PyObject *pathname, PyObject *cpathname);
+
     PyObject* (*PyModule_GetDict)(PyObject*);
+    int (*PyModule_AddFunctions)(PyObject* module, PyMethodDef* functions);
+
+    void (*PyMem_Free)(void* p);
 
     void (*Py_IncRef)(PyObject*);
     void (*Py_DecRef)(PyObject*);
 
-}// PYTHON_FUNTIONS
+    PyObject* MODULE_MAIN_DICT;
+    PyObject* MODULE_XBUS_DICT;
+    PyObject* OBJECT_NONE;
 
-void* MODULE_MAIN_DICT;
-void* MODULE_XBUS_DICT;
+    PyObject* XBusLoadModule(PyObject* self, PyObject* arg)
+    {
+        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
+
+        Py_IncRef(arg);
+
+        auto size = PyUnicode_GetLength(arg);
+        auto buffer = PyUnicode_AsUCS4Copy(arg);
+        auto name = conv.to_bytes(std::u32string(buffer, size));
+        PyMem_Free(buffer);
+
+        size_t source_code_index = 0;
+        for ( ; source_code_index < SourceCodeItemCount; ++source_code_index)
+        {
+            auto name_buffer = SourceCodeNameBlockBuffer[source_code_index];
+            auto name_size = SourceCodeNameBlockBufferSize[source_code_index];
+            if( name.compare(0, name_size, name_buffer) == 0 ){
+                break;
+            }
+        }
+
+        if( source_code_index == SourceCodeItemCount ){
+            printf("XBusLoadModule Try Load None Exists Module %s\n", name.c_str());
+            return PYTHON::OBJECT_NONE;
+        }
+
+        auto code_object = PyMarshal_ReadObjectFromString( \
+                                SourceCodeDataBlockBuffer[source_code_index],
+                                SourceCodeDataBlockBufferSize[source_code_index]
+                            );
+
+        auto module_object = PyImport_ExecCodeModuleObject(arg, code_object, arg, NULL);
+        // auto module_object = PyImport_ExecCodeModule(name.c_str(), code_object);
+
+        Py_DecRef(module_object);
+        Py_DecRef(code_object);
+
+        Py_DecRef(arg);
+
+        return module_object;
+    }
+
+}// PYTHON
 
 void Py_Run_Txt(const char* txt) {
-    if( 0 != PYTHON_FUNTIONS::PyRun_SimpleString(txt) ){
+    if( 0 != PYTHON::PyRun_SimpleString(txt) ){
         throw std::runtime_error("::PyRun_SimpleString Failed");
     }
 }
 
 auto Py_Object_Call(void* callable_object, void* args) {
-    auto res = PYTHON_FUNTIONS::PyObject_CallObject(callable_object, args);
+    auto res = PYTHON::PyObject_CallObject(callable_object, args);
     if( res == NULL ){
         throw std::runtime_error("::PyObject_CallObject Failed");
     }
@@ -985,7 +1050,7 @@ auto Py_Object_Call(void* callable_object, void* args) {
 }
 
 auto Py_Tuple_New(size_t len) {
-    auto res = PYTHON_FUNTIONS::PyTuple_New(len);
+    auto res = PYTHON::PyTuple_New(len);
     if( res == NULL ){
         throw std::runtime_error("::PyTuple_New Failed");
     }
@@ -993,13 +1058,13 @@ auto Py_Tuple_New(size_t len) {
 }
 
 void Py_Tuple_Set_Item(void* p, size_t pos, void* o) {
-    if( PYTHON_FUNTIONS::PyTuple_SetItem(p, pos, o) ){
+    if( PYTHON::PyTuple_SetItem(p, pos, o) ){
         throw std::runtime_error("::PyTuple_SetItem Failed");
     }
 }
 
 auto Py_Unicode_From_UTF8_Str(const std::string& str) {
-    auto res = PYTHON_FUNTIONS::PyUnicode_FromStringAndSize(str.data(), str.size());
+    auto res = PYTHON::PyUnicode_FromStringAndSize(str.data(), str.size());
     if( res == NULL ){
         throw std::runtime_error("::PyUnicode_FromStringAndSize Failed");
     }
@@ -1008,7 +1073,7 @@ auto Py_Unicode_From_UTF8_Str(const std::string& str) {
 
 auto Py_Unicode_To_UTF8_Str(void* unicode) {
     ptrdiff_t size;
-    auto buffer = PYTHON_FUNTIONS::PyUnicode_AsUTF8AndSize(unicode, &size);
+    auto buffer = PYTHON::PyUnicode_AsUTF8AndSize(unicode, &size);
     if( buffer == NULL ){
         throw std::runtime_error("::PyUnicode_AsUTF8AndSize Failed");
     }
@@ -1017,20 +1082,20 @@ auto Py_Unicode_To_UTF8_Str(void* unicode) {
 
 void Py_Ref_Dec(void* object) {
     if( object != NULL ){
-        PYTHON_FUNTIONS::Py_DecRef(object);
+        PYTHON::Py_DecRef(object);
     }
 }
 
 // Export To XBusLite For Public API
 int Python::Eval(const char* source)
 {
-    return PYTHON_FUNTIONS::PyRun_SimpleString(source);
+    return PYTHON::PyRun_SimpleString(source);
 }
 
 // Export To XBusLite For Public API
 int Python::Eval(const std::string& source)
 {
-    return PYTHON_FUNTIONS::PyRun_SimpleString(source.c_str());
+    return PYTHON::PyRun_SimpleString(source.c_str());
 }
 
 // Export To XBusLite For Public API
@@ -1038,29 +1103,29 @@ int Python::Eval(const EmbededSourceLoader& source_loader)
 {
     auto source_url = source_loader.url();
 
-    size_t SourceCodeIndex = 0;
-    for ( ; SourceCodeIndex < SourceCodeItemCount; ++SourceCodeIndex)
+    size_t source_code_index = 0;
+    for ( ; source_code_index < SourceCodeItemCount; ++source_code_index)
     {
-        auto name_buffer = SourceCodeNameBlockBuffer[SourceCodeIndex];
-        auto name_size = SourceCodeNameBlockBufferSize[SourceCodeIndex];
+        auto name_buffer = SourceCodeNameBlockBuffer[source_code_index];
+        auto name_size = SourceCodeNameBlockBufferSize[source_code_index];
         if( source_url.compare(0, name_size, name_buffer) == 0 ){
             break;
         }
     }
-    if( SourceCodeIndex == SourceCodeItemCount ){
+    if( source_code_index == SourceCodeItemCount ){
         throw std::runtime_error("Python::Eval Try to Call None Exists Code");
     }
 
-    auto code_object = PYTHON_FUNTIONS::PyMarshal_ReadObjectFromString(
-            SourceCodeDataBlockBuffer[SourceCodeIndex],
-            SourceCodeDataBlockBufferSize[SourceCodeIndex]
+    auto code_object = PYTHON::PyMarshal_ReadObjectFromString(
+            SourceCodeDataBlockBuffer[source_code_index],
+            SourceCodeDataBlockBufferSize[source_code_index]
         );
 
-    auto result_object = PYTHON_FUNTIONS::PyEval_EvalCode( \
-                        code_object, MODULE_MAIN_DICT, MODULE_MAIN_DICT );
+    auto result_object = PYTHON::PyEval_EvalCode( code_object, \
+                    PYTHON::MODULE_MAIN_DICT, PYTHON::MODULE_MAIN_DICT );
 
-    PYTHON_FUNTIONS::Py_DecRef(result_object);
-    PYTHON_FUNTIONS::Py_DecRef(code_object);
+    PYTHON::Py_DecRef(result_object);
+    PYTHON::Py_DecRef(code_object);
 
     return 0;
 }
@@ -1072,7 +1137,7 @@ int Python::Initialize()
 
     auto PyLy = std::make_unique<DynamicLibraryLoader>(PythonRuntimeFilePath());
 
-    {   namespace PF = PYTHON_FUNTIONS;
+    {   namespace PF = PYTHON;
 
         #define X_LOAD_PY_FUN_PTR(X) \
             PF::X = PyLy->Load<decltype(PF::X)>(#X);
@@ -1082,17 +1147,27 @@ int Python::Initialize()
 
         X_LOAD_PY_FUN_PTR(PyUnicode_FromStringAndSize);
         X_LOAD_PY_FUN_PTR(PyUnicode_AsUTF8AndSize);
+        X_LOAD_PY_FUN_PTR(PyUnicode_GetLength);
+        X_LOAD_PY_FUN_PTR(PyUnicode_AsUCS4Copy);
 
         X_LOAD_PY_FUN_PTR(PyMarshal_ReadObjectFromString);
 
         X_LOAD_PY_FUN_PTR(PyEval_EvalCode);
         X_LOAD_PY_FUN_PTR(PyRun_SimpleString);
+
+        X_LOAD_PY_FUN_PTR(PyObject_Print);
         X_LOAD_PY_FUN_PTR(PyObject_CallObject);
 
         X_LOAD_PY_FUN_PTR(PyImport_AddModule);
+        X_LOAD_PY_FUN_PTR(PyImport_ExecCodeModule);
+        X_LOAD_PY_FUN_PTR(PyImport_ExecCodeModuleObject);
+
         X_LOAD_PY_FUN_PTR(PyModule_GetDict);
+        X_LOAD_PY_FUN_PTR(PyModule_AddFunctions);
 
         X_LOAD_PY_FUN_PTR(PyDict_GetItemString);
+
+        X_LOAD_PY_FUN_PTR(PyMem_Free);
 
         X_LOAD_PY_FUN_PTR(Py_IncRef);
         X_LOAD_PY_FUN_PTR(Py_DecRef);
@@ -1126,10 +1201,25 @@ int Python::Initialize()
     // init python
     PyLy->Load<void(*)(void)>("Py_Initialize")();
 
-    auto module_main = PYTHON_FUNTIONS::PyImport_AddModule("__main__");
-    PYTHON_FUNTIONS::Py_IncRef(module_main);
+    {   using namespace PYTHON;
 
-    MODULE_MAIN_DICT = PYTHON_FUNTIONS::PyModule_GetDict(module_main);
+        auto module_main = PyImport_AddModule("__main__");
+        Py_IncRef(module_main);
+
+        static PyMethodDef methods_list[2];
+
+        methods_list[0].ml_name  = "xbus_load_module";
+        methods_list[0].ml_meth  = XBusLoadModule;
+        methods_list[0].ml_flags = 0x0008; // METH_O
+        methods_list[0].ml_doc   = NULL;
+
+        PyModule_AddFunctions(module_main, methods_list);
+
+        MODULE_MAIN_DICT = PyModule_GetDict(module_main);
+
+        PyRun_SimpleString("a = None");
+        OBJECT_NONE = PyDict_GetItemString(MODULE_MAIN_DICT, "a");
+    }
 
     return 0;
 }
@@ -1183,25 +1273,28 @@ bool InitPythonRuntime(int argc, char* argv[])
 
     Python::Initialize();
 
-    // add moduel xbus for next runing XBUS_MODULE_TXT
-    auto module_xbus = PYTHON_FUNTIONS::PyImport_AddModule("xbus");
-    PYTHON_FUNTIONS::Py_IncRef(module_xbus);
+    {   using namespace PYTHON;
 
-    MODULE_XBUS_DICT = PYTHON_FUNTIONS::PyModule_GetDict(module_xbus);
+    // add moduel xbus for next runing XBUS_MODULE_TXT
+    auto module_xbus = PyImport_AddModule("xbus");
+    Py_IncRef(module_xbus);
+
+    MODULE_XBUS_DICT = PyModule_GetDict(module_xbus);
 
     // in XBUS_MODULE_TXT we defined xbus module function
-    PYTHON_FUNTIONS::PyRun_SimpleString(XBUS_MODULE_TXT);
+    PyRun_SimpleString(XBUS_MODULE_TXT);
 
     // funtion for : __execute_json_serialized_no_parameters_function__
     PY_FUN_PTR_EXECUTE_JSON_SERIALIZED_NO_PARAMETERS_FUNCTION = \
-                PYTHON_FUNTIONS::PyDict_GetItemString( MODULE_XBUS_DICT, \
+                    PyDict_GetItemString( MODULE_XBUS_DICT, \
                         "__execute_json_serialized_no_parameters_function__"
                 );
     // funtion for : __execute_json_serialized_with_parameters_function__
     PY_FUN_PTR_EXECUTE_JSON_SERIALIZED_WITH_PARAMETERS_FUNCTION = \
-                PYTHON_FUNTIONS::PyDict_GetItemString( MODULE_XBUS_DICT, \
+                    PyDict_GetItemString( MODULE_XBUS_DICT, \
                         "__execute_json_serialized_with_parameters_function__"
                 );
+    } // end using namespace PYTHON
 
     return true;
 }

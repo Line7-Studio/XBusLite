@@ -1,7 +1,3 @@
-#include <XBus.hxx>
-
-auto client_python_source = R"(
-
 import xbus
 
 
@@ -28,15 +24,3 @@ def fun_3(value: int):
     #print('fun_3 called')
     return value*2
 
-)";
-
-bool init_client(std::map<std::string, std::string>& /*args*/)
-{
-    printf("%s %s\n", __FILE__, __FUNCTION__);
-
-    XBus::Python::Eval(client_python_source);
-
-    return true;
-}
-
-XBUS_REGISTE_CLIENT("Client", init_client);
