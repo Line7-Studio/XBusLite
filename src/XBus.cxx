@@ -977,14 +977,15 @@ namespace PYTHON
     PyObject* (*PyImport_AddModule)(const char*);
     PyObject* (*PyImport_ExecCodeModule)(const char* name, PyObject* co);
     PyObject* (*PyImport_ExecCodeModuleObject)( \
-            PyObject *name, PyObject *co, PyObject *pathname, PyObject *cpathname);
+            PyObject* name, PyObject* co, PyObject* pathname, PyObject* cpathname);
 
     PyObject* (*PyModule_GetDict)(PyObject*);
     int (*PyModule_AddFunctions)(PyObject* module, PyMethodDef* functions);
+    int (*PyModule_AddStringConstant)(PyObject* module, const char* name, const char* value);
 
-    wchar_t* (*Py_DecodeLocale)(const char* arg, size_t *size);
+    wchar_t* (*Py_DecodeLocale)(const char* arg, size_t* size);
 
-    void (*PySys_SetArgvEx)(int argc, wchar_t **argv, int updatepath);
+    void (*PySys_SetArgvEx)(int argc, wchar_t** argv, int updatepath);
 
     void (*PyMem_Free)(void* p);
 
@@ -1155,6 +1156,7 @@ int Python::Initialize(int argc, char* argv[])
         X_LOAD_PY_FUN_PTR(PyImport_ExecCodeModule);
         X_LOAD_PY_FUN_PTR(PyImport_ExecCodeModuleObject);
 
+        X_LOAD_PY_FUN_PTR(PyModule_AddStringConstant);
         X_LOAD_PY_FUN_PTR(PyModule_AddFunctions);
         X_LOAD_PY_FUN_PTR(PyModule_GetDict);
 
@@ -1233,6 +1235,17 @@ int Python::Initialize(int argc, char* argv[])
         auto module_main = PyImport_AddModule("__main__");
         Py_IncRef(module_main);
 
+        auto exe_dir = get_this_executable_located_dir();
+
+    #ifdef XBUS_LITE_PLATFORM_WINDOWS
+        std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
+        PyModule_AddStringConstant(module_main, \
+                     "__executable_located_folder__", convert.to_bytes(exe_dir).c_str());
+    #else  // Not On Windows
+        PyModule_AddStringConstant(module_main, \
+                     "__executable_located_folder__", exe_dir.c_str());
+    #endif// XBUS_LITE_PLATFORM_WINDOWS
+
         static PyMethodDef methods_list[2];
 
         methods_list[0].ml_name  = "xbus_load_module";
@@ -1246,6 +1259,7 @@ int Python::Initialize(int argc, char* argv[])
 
         PyRun_SimpleString("a = None");
         OBJECT_NONE = PyDict_GetItemString(MODULE_MAIN_DICT, "a");
+        PyRun_SimpleString("del a");
     }
 
     return 0;
