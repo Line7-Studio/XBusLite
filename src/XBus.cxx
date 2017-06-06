@@ -1003,7 +1003,7 @@ namespace PYTHON
 
     #ifdef _MSC_VER
         std::wstring_convert< std::codecvt_utf8<int32_t>, int32_t > conv;
-        auto name = conv.to_bytes(reinterpret_cast<const int32_t*>(std::u32string(buffer, size).data()));
+        auto name = conv.to_bytes(reinterpret_cast<const int32_t*>(std::u32string(buffer, size).c_str()));
     #else
         std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
         auto name = conv.to_bytes(std::u32string(buffer, size));
