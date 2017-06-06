@@ -184,7 +184,7 @@ struct Python
     static int Eval(const std::string& source);
     static int Eval(const EmbededSourceLoader& source_url);
 
-    static int Initialize();
+    static int Initialize(int argc, char* argv[]);
 };
 
 }// namespace XBusLite

@@ -982,6 +982,10 @@ namespace PYTHON
     PyObject* (*PyModule_GetDict)(PyObject*);
     int (*PyModule_AddFunctions)(PyObject* module, PyMethodDef* functions);
 
+    wchar_t* (*Py_DecodeLocale)(const char* arg, size_t *size);
+
+    void (*PySys_SetArgvEx)(int argc, wchar_t **argv, int updatepath);
+
     void (*PyMem_Free)(void* p);
 
     void (*Py_IncRef)(PyObject*);
@@ -1136,7 +1140,7 @@ int Python::Eval(const EmbededSourceLoader& source_loader)
 }
 
 // Export To XBusLite For Public API
-int Python::Initialize()
+int Python::Initialize(int argc, char* argv[])
 {
     // printf("%s %s\n", __FILE__, __FUNCTION__);
 
@@ -1147,35 +1151,40 @@ int Python::Initialize()
         #define X_LOAD_PY_FUN_PTR(X) \
             PF::X = PyLy->Load<decltype(PF::X)>(#X);
 
-        X_LOAD_PY_FUN_PTR(PyTuple_New);
-        X_LOAD_PY_FUN_PTR(PyTuple_SetItem);
-
-        X_LOAD_PY_FUN_PTR(PyUnicode_FromStringAndSize);
-        X_LOAD_PY_FUN_PTR(PyUnicode_AsUTF8AndSize);
-        X_LOAD_PY_FUN_PTR(PyUnicode_GetLength);
-        X_LOAD_PY_FUN_PTR(PyUnicode_AsUCS4Copy);
-
-        X_LOAD_PY_FUN_PTR(PyMarshal_ReadObjectFromString);
-
-        X_LOAD_PY_FUN_PTR(PyEval_EvalCode);
-        X_LOAD_PY_FUN_PTR(PyRun_SimpleString);
-
-        X_LOAD_PY_FUN_PTR(PyObject_Print);
-        X_LOAD_PY_FUN_PTR(PyObject_CallObject);
-
         X_LOAD_PY_FUN_PTR(PyImport_AddModule);
         X_LOAD_PY_FUN_PTR(PyImport_ExecCodeModule);
         X_LOAD_PY_FUN_PTR(PyImport_ExecCodeModuleObject);
 
-        X_LOAD_PY_FUN_PTR(PyModule_GetDict);
         X_LOAD_PY_FUN_PTR(PyModule_AddFunctions);
+        X_LOAD_PY_FUN_PTR(PyModule_GetDict);
+
+        X_LOAD_PY_FUN_PTR(PyObject_CallObject);
+        X_LOAD_PY_FUN_PTR(PyObject_Print);
+
+        X_LOAD_PY_FUN_PTR(PyTuple_New);
+        X_LOAD_PY_FUN_PTR(PyTuple_SetItem);
+
+        X_LOAD_PY_FUN_PTR(PyUnicode_AsUCS4Copy);
+        X_LOAD_PY_FUN_PTR(PyUnicode_AsUTF8AndSize);
+        X_LOAD_PY_FUN_PTR(PyUnicode_FromStringAndSize);
+        X_LOAD_PY_FUN_PTR(PyUnicode_GetLength);
 
         X_LOAD_PY_FUN_PTR(PyDict_GetItemString);
 
+        X_LOAD_PY_FUN_PTR(PyMarshal_ReadObjectFromString);
+
+        X_LOAD_PY_FUN_PTR(PyEval_EvalCode);
+
+        X_LOAD_PY_FUN_PTR(PyRun_SimpleString);
+
+        X_LOAD_PY_FUN_PTR(PySys_SetArgvEx);
+
+        X_LOAD_PY_FUN_PTR(Py_DecodeLocale);
+
         X_LOAD_PY_FUN_PTR(PyMem_Free);
 
-        X_LOAD_PY_FUN_PTR(Py_IncRef);
         X_LOAD_PY_FUN_PTR(Py_DecRef);
+        X_LOAD_PY_FUN_PTR(Py_IncRef);
 
         #undef X_LOAD_PY_FUN_PTR
     } // end load
@@ -1207,6 +1216,19 @@ int Python::Initialize()
     PyLy->Load<void(*)(void)>("Py_Initialize")();
 
     {   using namespace PYTHON;
+
+        auto wargv = new wchar_t*[argc];
+        for (int idx = 0; idx < argc; ++idx)
+        {
+            auto size = std::strlen(argv[idx]);
+            wargv[idx] = Py_DecodeLocale(argv[idx], &size);
+        }
+        PySys_SetArgvEx(argc, wargv, 0);
+        for (int idx = 0; idx < argc; ++idx)
+        {
+            PyMem_Free(wargv[idx]);
+        }
+        delete[] wargv;
 
         auto module_main = PyImport_AddModule("__main__");
         Py_IncRef(module_main);
@@ -1276,7 +1298,7 @@ bool InitPythonRuntime(int argc, char* argv[])
 {
     printf("%s %s\n", __FILE__, __FUNCTION__);
 
-    Python::Initialize();
+    Python::Initialize(argc, argv);
 
     {   using namespace PYTHON;
 
