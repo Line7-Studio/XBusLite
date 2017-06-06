@@ -125,12 +125,17 @@ function(xbus_add_client xbus_server_name KEYWORD_SRC)
     target_sources(${xbus_server_name} PRIVATE ${xbus_client_host_source_files})
     target_include_directories(${xbus_server_name} PRIVATE ${xbus_lite_dir}/src)
 
-    get_target_property(SERVER_HOST_NAME ${xbus_server_name} RUNTIME_OUTPUT_NAME)
+    get_target_property(server_host_name ${xbus_server_name} RUNTIME_OUTPUT_NAME)
+    get_target_property(server_host_dir ${xbus_server_name} RUNTIME_OUTPUT_DIRECTORY)
+
+    # this is the default dir, eg. same as the server
+    set_target_properties(${xbus_server_name}_xbus_client_host PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY ${server_host_dir})
 
     get_property(is_macos_bundle TARGET ${xbus_server_name} PROPERTY MACOSX_BUNDLE)
     if(${is_macos_bundle})
-        set_target_properties(${xbus_server_name}_xbus_client_host
-            PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${xbus_server_name}.app/Contents/MacOS)
+        set_target_properties(${xbus_server_name}_xbus_client_host PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY ${server_host_dir}/${xbus_server_name}.app/Contents/MacOS)
     endif()
 
 endfunction()
