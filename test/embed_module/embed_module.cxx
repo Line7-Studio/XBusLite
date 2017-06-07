@@ -2,7 +2,7 @@
 
 auto client_python_source = R"(
 
-embed_module = xbus_load_module(':EmbededSource')
+embed_module = __load_embeded_module__(':EmbededSource')
 
 fun_0 = embed_module.fun_0
 fun_1 = embed_module.fun_1

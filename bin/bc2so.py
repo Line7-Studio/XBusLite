@@ -36,7 +36,7 @@ def process(resource_file, resource_name):
                 break
     in_file_hash = hash_fun.hexdigest().upper()
 
-    code_object = compile(in_source_source, '<string>', 'exec', dont_inherit=True)
+    code_object = compile(in_source_source, '<string>', 'exec', dont_inherit=False)
     code_object_bytes = marshal.dumps(code_object)
 
     row_count, row_step = 0, 12

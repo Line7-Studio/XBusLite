@@ -975,6 +975,7 @@ namespace PYTHON
     PyObject* (*PyDict_GetItemString)(PyObject*, const char*);
 
     PyObject* (*PyImport_AddModule)(const char*);
+    PyObject* (*PyImport_AddModuleObject)(PyObject* name);
     PyObject* (*PyImport_ExecCodeModule)(const char* name, PyObject* co);
     PyObject* (*PyImport_ExecCodeModuleObject)( \
             PyObject* name, PyObject* co, PyObject* pathname, PyObject* cpathname);
@@ -994,10 +995,13 @@ namespace PYTHON
 
     PyObject* MODULE_MAIN_DICT;
     PyObject* MODULE_XBUS_DICT;
-    PyObject* OBJECT_NONE;
 
-    PyObject* XBusLoadModule(PyObject* self, PyObject* arg)
+    PyObject* OBJECT_NONE;
+    PyObject* FUNCTION_EXEC;
+
+    PyObject* LoadEmbededModule(PyObject* self, PyObject* arg)
     {
+        printf("%s\n", __FUNCTION__);
         Py_IncRef(arg);
         auto size = PyUnicode_GetLength(arg);
         auto buffer = PyUnicode_AsUCS4Copy(arg);
@@ -1023,7 +1027,7 @@ namespace PYTHON
         }
 
         if( source_code_index == SourceCodeItemCount ){
-            printf("XBusLoadModule Try Load None Exists Module %s\n", name.c_str());
+            printf("LoadEmbededModule Try Load None Exists Module %s\n", name.c_str());
             return PYTHON::OBJECT_NONE;
         }
 
@@ -1032,15 +1036,29 @@ namespace PYTHON
                                 SourceCodeDataBlockBufferSize[source_code_index]
                             );
 
-        auto module_object = PyImport_ExecCodeModuleObject(arg, code_object, arg, NULL);
-        // auto module_object = PyImport_ExecCodeModule(name.c_str(), code_object);
+        printf("%s %p\n", name.c_str(), code_object);
 
-        Py_DecRef(module_object);
-        Py_DecRef(code_object);
+        printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+        // auto module_object = PyImport_AddModuleObject(arg);
+        // auto module_object = PyImport_AddModule(name.c_str());
+        // auto module_object = PyImport_ExecCodeModuleObject(arg, code_object, arg, NULL);
+        // auto module_object = PyImport_ExecCodeModule(name.c_str(), code_object);
+        // printf("module_object %p\n", module_object);
+
+        // PyEval_EvalCode(code_object, MODULE_MAIN_DICT, MODULE_MAIN_DICT);
+        // auto arguments = PyTuple_New(2);
+        // // auto arguments = PyTuple_New(1);
+        // PyTuple_SetItem(arguments, 0, code_object);
+        // PyTuple_SetItem(arguments, 1, module_object);
+        // PyObject_CallObject(FUNCTION_EXEC, arguments);
+
+        // Py_DecRef(module_object);
+        // Py_DecRef(code_object);
 
         Py_DecRef(arg);
 
-        return module_object;
+        return code_object;
+        // return module_object;
     }
 
 }// PYTHON
@@ -1153,6 +1171,7 @@ int Python::Initialize(int argc, char* argv[])
             PF::X = PyLy->Load<decltype(PF::X)>(#X);
 
         X_LOAD_PY_FUN_PTR(PyImport_AddModule);
+        X_LOAD_PY_FUN_PTR(PyImport_AddModuleObject);
         X_LOAD_PY_FUN_PTR(PyImport_ExecCodeModule);
         X_LOAD_PY_FUN_PTR(PyImport_ExecCodeModuleObject);
 
@@ -1232,6 +1251,14 @@ int Python::Initialize(int argc, char* argv[])
         }
         delete[] wargv;
 
+        // Fetch None from builtins
+        auto module_builtins = PyImport_AddModule("builtins");
+        auto module_builtins_dict = PyModule_GetDict(module_builtins);
+        OBJECT_NONE = PyDict_GetItemString(module_builtins_dict, "None");
+        FUNCTION_EXEC = PyDict_GetItemString(module_builtins_dict, "exec");
+        Py_DecRef(module_builtins);
+
+        // Module __main__
         auto module_main = PyImport_AddModule("__main__");
         Py_IncRef(module_main);
 
@@ -1248,18 +1275,15 @@ int Python::Initialize(int argc, char* argv[])
 
         static PyMethodDef methods_list[2];
 
-        methods_list[0].ml_name  = "xbus_load_module";
-        methods_list[0].ml_meth  = XBusLoadModule;
+        methods_list[0].ml_name  = "__load_embeded_module__";
+        methods_list[0].ml_meth  = LoadEmbededModule;
         methods_list[0].ml_flags = 0x0008; // METH_O
         methods_list[0].ml_doc   = NULL;
 
         PyModule_AddFunctions(module_main, methods_list);
+        // PyModule_AddFunctions(module_builtins, methods_list);
 
         MODULE_MAIN_DICT = PyModule_GetDict(module_main);
-
-        PyRun_SimpleString("a = None");
-        OBJECT_NONE = PyDict_GetItemString(MODULE_MAIN_DICT, "a");
-        PyRun_SimpleString("del a");
     }
 
     return 0;
