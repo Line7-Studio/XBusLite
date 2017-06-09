@@ -1089,16 +1089,13 @@ namespace PYTHON
         return module_object;
     }
 
-
     PyObject* LoadEmbededModuleSourceCodeStr(PyObject* self, PyObject* arg)
     {
-        auto state = PyGILState_Ensure();
-
-        #ifdef _MSC_VER
+    #ifdef _MSC_VER
         printf("%s\n", __FUNCSIG__);
-        #else
+    #else
         printf("%s\n", __PRETTY_FUNCTION__);
-        #endif
+    #endif
 
         Py_IncRef(arg);
         auto size = PyUnicode_GetLength(arg);
@@ -1133,12 +1130,10 @@ namespace PYTHON
                                 SourceCodeDataBlockBuffer[source_code_index],
                                 SourceCodeDataBlockBufferSize[source_code_index]
                             );
+
         printf("%p\n", source_str);
 
         Py_IncRef(source_str);
-
-        PyGILState_Release(state);
-
         return source_str;
     }
 
@@ -1452,6 +1447,13 @@ import sys
 
 def __load_embeded_module_ex__(module_name):
     source = __load_embeded_module_source_code_str__(module_name)
+    code = compile(source, '<string>', 'exec')
+    module = type(sys)(module_name)
+    exec(code, module.__dict__)
+    return module
+
+
+def __eval_load_embeded_module_ex__(module_name, source):
     code = compile(source, '<string>', 'exec')
     module = type(sys)(module_name)
     exec(code, module.__dict__)
