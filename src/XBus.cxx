@@ -17,6 +17,8 @@
 
 #include <type_traits>
 
+#include <fstream>
+
 #ifdef XBUS_LITE_PLATFORM_WINDOWS
     #define NOMINMAX
     #define WIN32_LEAN_AND_MEAN
@@ -940,6 +942,7 @@ public:
 
 namespace PYTHON
 {
+    typedef void PyArena;
     typedef void PyObject;
     typedef char32_t Py_UCS4;
     typedef ptrdiff_t Py_ssize_t;
@@ -954,6 +957,9 @@ namespace PYTHON
     };
 
     typedef struct PyMethodDef PyMethodDef;
+
+    PyArena* (*PyArena_New)(void);
+    void (*PyArena_Free)(PyArena* );
 
     int (*PyRun_SimpleString)(const char* command);
 
@@ -1001,7 +1007,12 @@ namespace PYTHON
 
     PyObject* LoadEmbededModule(PyObject* self, PyObject* arg)
     {
-        printf("%s\n", __FUNCTION__);
+        #ifdef _MSC_VER
+        printf("%s\n", __FUNCSIG__);
+        #else
+        printf("%s\n", __PRETTY_FUNCTION__);
+        #endif
+
         Py_IncRef(arg);
         auto size = PyUnicode_GetLength(arg);
         auto buffer = PyUnicode_AsUCS4Copy(arg);
@@ -1041,11 +1052,15 @@ namespace PYTHON
         printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
         // auto module_object = PyImport_AddModuleObject(arg);
         // auto module_object = PyImport_AddModule(name.c_str());
-        // auto module_object = PyImport_ExecCodeModuleObject(arg, code_object, arg, NULL);
+
+        // auto arean = PyArena_New();
+
+        auto module_object = PyImport_ExecCodeModuleObject(arg, code_object, arg, NULL);
         // auto module_object = PyImport_ExecCodeModule(name.c_str(), code_object);
         // printf("module_object %p\n", module_object);
 
         // PyEval_EvalCode(code_object, MODULE_MAIN_DICT, MODULE_MAIN_DICT);
+
         // auto arguments = PyTuple_New(2);
         // // auto arguments = PyTuple_New(1);
         // PyTuple_SetItem(arguments, 0, code_object);
@@ -1054,11 +1069,53 @@ namespace PYTHON
 
         // Py_DecRef(module_object);
         // Py_DecRef(code_object);
+        // Py_IncRef(module_object);
+        // Py_IncRef(code_object);
+
+        // PyArena_Free(arean);
 
         Py_DecRef(arg);
 
-        return code_object;
-        // return module_object;
+        // return code_object;
+        return module_object;
+    }
+
+    PyObject* LoadEmbededModuleFile(PyObject* self, PyObject* arg)
+    {
+        #ifdef _MSC_VER
+        printf("%s\n", __FUNCSIG__);
+        #else
+        printf("%s\n", __PRETTY_FUNCTION__);
+        #endif
+
+        Py_IncRef(arg);
+        auto size = PyUnicode_GetLength(arg);
+        auto buffer = PyUnicode_AsUCS4Copy(arg);
+
+    #ifdef _MSC_VER
+        std::wstring_convert< std::codecvt_utf8<int32_t>, int32_t > conv;
+        auto file_full_path = conv.to_bytes(reinterpret_cast<const int32_t*>(std::u32string(buffer, size).c_str()));
+    #else
+        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
+        auto file_full_path = conv.to_bytes(std::u32string(buffer, size));
+    #endif // _MSC_VER
+
+        PyMem_Free(buffer);
+
+        printf("%s\n", file_full_path.c_str());
+
+        auto f = std::ifstream(file_full_path);
+        std::string str((std::istreambuf_iterator<char>(f)),
+                         std::istreambuf_iterator<char>());
+
+        PyRun_SimpleString(str.c_str());
+
+        printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+        auto module_object = PyImport_AddModuleObject(arg);
+
+
+        Py_DecRef(arg);
+        return module_object;
     }
 
 }// PYTHON
@@ -1117,12 +1174,14 @@ void Py_Ref_Dec(void* object) {
 // Export To XBusLite For Public API
 int Python::Eval(const char* source)
 {
+    // __main__
     return PYTHON::PyRun_SimpleString(source);
 }
 
 // Export To XBusLite For Public API
 int Python::Eval(const std::string& source)
 {
+    // __main__
     return PYTHON::PyRun_SimpleString(source.c_str());
 }
 
@@ -1169,6 +1228,9 @@ int Python::Initialize(int argc, char* argv[])
 
         #define X_LOAD_PY_FUN_PTR(X) \
             PF::X = PyLy->Load<decltype(PF::X)>(#X);
+
+        X_LOAD_PY_FUN_PTR(PyArena_New);
+        X_LOAD_PY_FUN_PTR(PyArena_Free);
 
         X_LOAD_PY_FUN_PTR(PyImport_AddModule);
         X_LOAD_PY_FUN_PTR(PyImport_AddModuleObject);
@@ -1273,12 +1335,17 @@ int Python::Initialize(int argc, char* argv[])
                      "__executable_located_folder__", exe_dir.c_str());
     #endif// XBUS_LITE_PLATFORM_WINDOWS
 
-        static PyMethodDef methods_list[2];
+        static PyMethodDef methods_list[3];
 
         methods_list[0].ml_name  = "__load_embeded_module__";
         methods_list[0].ml_meth  = LoadEmbededModule;
         methods_list[0].ml_flags = 0x0008; // METH_O
         methods_list[0].ml_doc   = NULL;
+
+        methods_list[1].ml_name  = "__load_embeded_module_file__";
+        methods_list[1].ml_meth  = LoadEmbededModuleFile;
+        methods_list[1].ml_flags = 0x0008; // METH_O
+        methods_list[1].ml_doc   = NULL;
 
         PyModule_AddFunctions(module_main, methods_list);
         // PyModule_AddFunctions(module_builtins, methods_list);
