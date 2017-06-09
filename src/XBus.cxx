@@ -1108,15 +1108,64 @@ namespace PYTHON
         std::string str((std::istreambuf_iterator<char>(f)),
                          std::istreambuf_iterator<char>());
 
-        PyRun_SimpleString(str.c_str());
+        return PyUnicode_FromStringAndSize(str.data(), str.size());
 
-        printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-        auto module_object = PyImport_AddModuleObject(arg);
+        // PyRun_SimpleString(str.c_str());
 
+        // auto module_object = PyImport_AddModuleObject(arg);
+
+        // Py_DecRef(arg);
+        // return module_object;
+    }
+
+    PyObject* LoadEmbededModuleCodeObject(PyObject* self, PyObject* arg)
+    {
+        #ifdef _MSC_VER
+        printf("%s\n", __FUNCSIG__);
+        #else
+        printf("%s\n", __PRETTY_FUNCTION__);
+        #endif
+
+        Py_IncRef(arg);
+        auto size = PyUnicode_GetLength(arg);
+        auto buffer = PyUnicode_AsUCS4Copy(arg);
+
+    #ifdef _MSC_VER
+        std::wstring_convert< std::codecvt_utf8<int32_t>, int32_t > conv;
+        auto name = conv.to_bytes(reinterpret_cast<const int32_t*>(std::u32string(buffer, size).c_str()));
+    #else
+        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
+        auto name = conv.to_bytes(std::u32string(buffer, size));
+    #endif // _MSC_VER
+
+        PyMem_Free(buffer);
+
+        size_t source_code_index = 0;
+        for ( ; source_code_index < SourceCodeItemCount; ++source_code_index)
+        {
+            auto name_buffer = SourceCodeNameBlockBuffer[source_code_index];
+            auto name_size = SourceCodeNameBlockBufferSize[source_code_index];
+            if( name.compare(0, name_size, name_buffer) == 0 ){
+                break;
+            }
+        }
+
+        if( source_code_index == SourceCodeItemCount ){
+            printf("LoadEmbededModule Try Load None Exists Module %s\n", name.c_str());
+            return PYTHON::OBJECT_NONE;
+        }
+
+        auto code_object = PyMarshal_ReadObjectFromString( \
+                                SourceCodeDataBlockBuffer[source_code_index],
+                                SourceCodeDataBlockBufferSize[source_code_index]
+                            );
+
+        printf("%s %p\n", name.c_str(), code_object);
 
         Py_DecRef(arg);
-        return module_object;
+        return code_object;
     }
+
 
 }// PYTHON
 
@@ -1335,7 +1384,7 @@ int Python::Initialize(int argc, char* argv[])
                      "__executable_located_folder__", exe_dir.c_str());
     #endif// XBUS_LITE_PLATFORM_WINDOWS
 
-        static PyMethodDef methods_list[3];
+        static PyMethodDef methods_list[4];
 
         methods_list[0].ml_name  = "__load_embeded_module__";
         methods_list[0].ml_meth  = LoadEmbededModule;
@@ -1346,6 +1395,11 @@ int Python::Initialize(int argc, char* argv[])
         methods_list[1].ml_meth  = LoadEmbededModuleFile;
         methods_list[1].ml_flags = 0x0008; // METH_O
         methods_list[1].ml_doc   = NULL;
+
+        methods_list[2].ml_name  = "__load_embeded_module_code_object__";
+        methods_list[2].ml_meth  = LoadEmbededModuleCodeObject;
+        methods_list[2].ml_flags = 0x0008; // METH_O
+        methods_list[2].ml_doc   = NULL;
 
         PyModule_AddFunctions(module_main, methods_list);
         // PyModule_AddFunctions(module_builtins, methods_list);
