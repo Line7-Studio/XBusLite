@@ -60,8 +60,8 @@ def process(file_full_path, resource_name):
 
     print('static const unsigned char resource_data[] = {\n')
 
-    # embeded_data = resource_file_to_embeded_data(file_full_path)
-    embeded_data = resource_file_to_embeded_data_RAW(file_full_path)
+    embeded_data = resource_file_to_embeded_data_EXEC(file_full_path)
+    # embeded_data = resource_file_to_embeded_data_RAW(file_full_path)
 
     row_count, row_step = 0, 12
     while True:
