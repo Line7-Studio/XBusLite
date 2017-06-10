@@ -962,6 +962,10 @@ namespace PYTHON
     int (*PyObject_Print)(PyObject *o, FILE *fp, int flags);
     PyObject* (*PyObject_CallObject)(PyObject* callable_object, PyObject* args);
 
+    int (*PyObject_HasAttrString)(PyObject* o, const char* attr_name);
+    int (*PyObject_SetAttrString)(PyObject *o, const char *attr_name, PyObject *v);
+    PyObject* (*PyObject_GetAttrString)(PyObject* o, const char* attr_name);
+
     PyObject* (*PyTuple_New)(Py_ssize_t len);
     int (*PyTuple_SetItem)(PyObject* p, Py_ssize_t pos, PyObject* o);
 
@@ -972,9 +976,12 @@ namespace PYTHON
 
     PyObject* (*PyMarshal_ReadObjectFromString)(const char*, Py_ssize_t);
 
+    PyObject* (*PyEval_GetBuiltins)();
+
     PyObject* (*PyEval_EvalCode)(PyObject*, PyObject*, PyObject*);
 
     PyObject* (*PyDict_GetItemString)(PyObject*, const char*);
+    int (*PyDict_SetItemString)(PyObject* p, const char* key, PyObject* val);
 
     PyObject* (*PyImport_AddModule)(const char*);
     PyObject* (*PyImport_AddModuleObject)(PyObject* name);
@@ -1001,130 +1008,61 @@ namespace PYTHON
     PyObject* OBJECT_NONE;
     PyObject* FUNCTION_EXEC;
 
-    PyObject* LoadEmbededModule(PyObject* self, PyObject* arg)
-    {
-    #ifdef _MSC_VER
-        printf("%s\n", __FUNCSIG__);
-    #else
-        printf("%s\n", __PRETTY_FUNCTION__);
-    #endif
-
-        Py_IncRef(arg);
-        auto size = PyUnicode_GetLength(arg);
-        auto buffer = PyUnicode_AsUCS4Copy(arg);
-
-    #ifdef _MSC_VER
-        std::wstring_convert< std::codecvt_utf8<int32_t>, int32_t > conv;
-        auto name = conv.to_bytes(reinterpret_cast<const int32_t*>(std::u32string(buffer, size).c_str()));
-    #else
-        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
-        auto name = conv.to_bytes(std::u32string(buffer, size));
-    #endif // _MSC_VER
-
-        PyMem_Free(buffer);
-
-        size_t source_code_index = 0;
-        for ( ; source_code_index < SourceCodeItemCount; ++source_code_index)
-        {
-            auto name_buffer = SourceCodeNameBlockBuffer[source_code_index];
-            auto name_size = SourceCodeNameBlockBufferSize[source_code_index];
-            if( (name_size == name.size()) && (name.compare(0, name_size, name_buffer) == 0) )
-            {
-                break;
-            }
-        }
-
-        if( source_code_index == SourceCodeItemCount ){
-            printf("LoadEmbededModule Try Load None Exists Module %s\n", name.c_str());
-            return PYTHON::OBJECT_NONE;
-        }
-
-        auto code_object = PyMarshal_ReadObjectFromString( \
-                                SourceCodeDataBlockBuffer[source_code_index],
-                                SourceCodeDataBlockBufferSize[source_code_index]
-                            );
-
-        auto module_object = PyImport_ExecCodeModuleObject(arg, code_object, arg, NULL);
-
-        // auto module_object = PyImport_AddModuleObject(arg);
-        // PyEval_EvalCode(code_object, MODULE_MAIN_DICT, MODULE_MAIN_DICT);
-
-        Py_DecRef(code_object);
-        Py_DecRef(arg);
-
-        return module_object;
-    }
-
-    PyObject* LoadEmbededModuleCodeObject(PyObject* self, PyObject* arg)
-    {
-    #ifdef _MSC_VER
-        printf("%s\n", __FUNCSIG__);
-    #else
-        printf("%s\n", __PRETTY_FUNCTION__);
-    #endif
-
-        Py_IncRef(arg);
-        auto size = PyUnicode_GetLength(arg);
-        auto buffer = PyUnicode_AsUCS4Copy(arg);
-
-    #ifdef _MSC_VER
-        std::wstring_convert< std::codecvt_utf8<int32_t>, int32_t > conv;
-        auto name = conv.to_bytes(reinterpret_cast<const int32_t*>(std::u32string(buffer, size).c_str()));
-    #else
-        std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
-        auto name = conv.to_bytes(std::u32string(buffer, size));
-    #endif // _MSC_VER
-
-        PyMem_Free(buffer);
-
-        size_t source_code_index = 0;
-        for ( ; source_code_index < SourceCodeItemCount; ++source_code_index)
-        {
-            auto name_buffer = SourceCodeNameBlockBuffer[source_code_index];
-            auto name_size = SourceCodeNameBlockBufferSize[source_code_index];
-            if( (name_size == name.size()) && (name.compare(0, name_size, name_buffer) == 0) )
-            {
-                break;
-            }
-        }
-
-        if( source_code_index == SourceCodeItemCount ){
-            printf("LoadEmbededModule Try Load None Exists Module %s\n", name.c_str());
-            return PYTHON::OBJECT_NONE;
-        }
-
-        auto code_object = PyMarshal_ReadObjectFromString( \
-                                SourceCodeDataBlockBuffer[source_code_index],
-                                SourceCodeDataBlockBufferSize[source_code_index]
-                            );
-
-        printf("%s %p\n", name.c_str(), code_object);
-
-        Py_DecRef(arg);
-        return code_object;
-    }
-
-static const char* load_module_ex_function_txt = R"(
-
-import sys
-
-def __load_embeded_module_ex__(module_name):
-    source = __load_embeded_module_source_code_str__(module_name)
-    code = compile(source, '<string>', 'exec')
-    module = type(sys)(module_name)
-    exec(code, module.__dict__)
-    return module
-
-
-def __eval_load_embeded_module_ex__(module_name, source):
-    code = compile(source, '<string>', 'exec')
-    module = type(sys)(module_name)
-    exec(code, module.__dict__)
-    return module
-
-)";
 
 }// PYTHON
+
+namespace /**/
+{
+using namespace PYTHON;
+
+PyObject* LoadEmbededModule(PyObject* self, PyObject* arg)
+{
+    // Py_IncRef(arg);
+    auto size = PyUnicode_GetLength(arg);
+    auto buffer = PyUnicode_AsUCS4Copy(arg);
+
+#ifdef _MSC_VER
+    std::wstring_convert< std::codecvt_utf8<int32_t>, int32_t > conv;
+    auto name = conv.to_bytes(\
+        reinterpret_cast<const int32_t*>(std::u32string(buffer, size).c_str()));
+#else
+    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
+    auto name = conv.to_bytes(std::u32string(buffer, size));
+#endif // _MSC_VER
+
+    PyMem_Free(buffer);
+
+    size_t source_code_index = 0;
+    for ( ; source_code_index < SourceCodeItemCount; ++source_code_index)
+    {
+        auto name_buffer = SourceCodeNameBlockBuffer[source_code_index];
+        auto name_size = SourceCodeNameBlockBufferSize[source_code_index];
+        if( (name_size == name.size()) && \
+            (name.compare(0, name_size, name_buffer) == 0) )
+        {
+            break;
+        }
+    }
+
+    if( source_code_index == SourceCodeItemCount ){
+        printf("LoadEmbededModule Try Load None Exists Module %s\n", name.c_str());
+        return PYTHON::OBJECT_NONE;
+    }
+
+    auto code_object = PyMarshal_ReadObjectFromString( \
+                            SourceCodeDataBlockBuffer[source_code_index],
+                            SourceCodeDataBlockBufferSize[source_code_index]
+                        );
+
+    auto module_object = PyImport_ExecCodeModuleObject(arg, code_object, arg, NULL);
+
+    Py_DecRef(code_object);
+    // Py_DecRef(arg);
+
+    return module_object;
+}
+
+}// end namespace
 
 void Py_Run_Txt(const char* txt) {
     if( 0 != PYTHON::PyRun_SimpleString(txt) ){
@@ -1247,6 +1185,8 @@ int Python::Initialize(int argc, char* argv[])
         X_LOAD_PY_FUN_PTR(PyModule_AddFunctions);
         X_LOAD_PY_FUN_PTR(PyModule_GetDict);
 
+        X_LOAD_PY_FUN_PTR(PyObject_HasAttrString);
+        X_LOAD_PY_FUN_PTR(PyObject_GetAttrString);
         X_LOAD_PY_FUN_PTR(PyObject_CallObject);
         X_LOAD_PY_FUN_PTR(PyObject_Print);
 
@@ -1259,9 +1199,11 @@ int Python::Initialize(int argc, char* argv[])
         X_LOAD_PY_FUN_PTR(PyUnicode_GetLength);
 
         X_LOAD_PY_FUN_PTR(PyDict_GetItemString);
+        X_LOAD_PY_FUN_PTR(PyDict_SetItemString);
 
         X_LOAD_PY_FUN_PTR(PyMarshal_ReadObjectFromString);
 
+        X_LOAD_PY_FUN_PTR(PyEval_GetBuiltins);
         X_LOAD_PY_FUN_PTR(PyEval_EvalCode);
 
         X_LOAD_PY_FUN_PTR(PyRun_SimpleString);
@@ -1276,91 +1218,81 @@ int Python::Initialize(int argc, char* argv[])
         X_LOAD_PY_FUN_PTR(Py_IncRef);
 
         #undef X_LOAD_PY_FUN_PTR
-    } // end load
+    } // end load python functions
 
-#ifdef XBUS_LITE_PLATFORM_WINDOWS
-    auto python_dll_path = check_and_formal_file_path(PythonRuntimeFilePath());
-    auto python_dll_dir = get_file_located_dir(python_dll_path);
-    auto python_dll_file_name = get_file_name(python_dll_path); // without dir
+    #ifdef XBUS_LITE_PLATFORM_WINDOWS
+        // fix python lib path on Windows
+        auto python_dll_path = check_and_formal_file_path(PythonRuntimeFilePath());
+        auto python_dll_dir = get_file_located_dir(python_dll_path);
+        auto python_dll_file_name = get_file_name(python_dll_path); // without dir
 
-    auto python_zip_file = python_dll_file_name.substr(0, \
-                                python_dll_file_name.rfind(L".")) + L".zip";
+        auto python_zip_file = python_dll_file_name.substr(0, \
+                                    python_dll_file_name.rfind(L".")) + L".zip";
 
-    auto python_lib_path = python_dll_dir + L"\\" + python_zip_file + L";"
-                         + python_dll_dir + L"\\Lib;"
-                         + python_dll_dir + L"\\Lib\\site-packages;"
-                         + python_dll_dir + L"\\DLLs;";
+        auto python_lib_path = python_dll_dir + L"\\" + python_zip_file + L";"
+                             + python_dll_dir + L"\\Lib;"
+                             + python_dll_dir + L"\\Lib\\site-packages;"
+                             + python_dll_dir + L"\\DLLs;";
 
-    // fix python lib path on Windows
-    PyLy->Load<void(*)(const wchar_t*)>("Py_SetPath")(python_lib_path.c_str());
-#endif // XBUS_LITE_PLATFORM_WINDOWS
+        PyLy->Load<void(*)(const wchar_t*)>("Py_SetPath")(python_lib_path.c_str());
+    #endif // XBUS_LITE_PLATFORM_WINDOWS
 
-#ifdef XBUS_LITE_PLATFORM_WINDOWS
-    ::SetEnvironmentVariable(L"PYTHONIOENCODING", L"UTF-8");
-#else // Not On Windows
-    ::setenv("PYTHONIOENCODING", "UTF-8", 0);
-#endif // XBUS_LITE_PLATFORM_WINDOWS
+    #ifdef XBUS_LITE_PLATFORM_WINDOWS
+        ::SetEnvironmentVariable(L"PYTHONIOENCODING", L"UTF-8");
+    #else // Not On Windows
+        ::setenv("PYTHONIOENCODING", "UTF-8", 0);
+    #endif // XBUS_LITE_PLATFORM_WINDOWS
 
     // init python
     PyLy->Load<void(*)(void)>("Py_Initialize")();
 
-    {   using namespace PYTHON;
-
+    { /******************/ using namespace PYTHON; /*******************/
+    { /************************* fix sys.argv *************************/
         auto wargv = new wchar_t*[argc];
-        for (int idx = 0; idx < argc; ++idx)
-        {
+        for (int idx = 0; idx < argc; ++idx) {
             auto size = std::strlen(argv[idx]);
             wargv[idx] = Py_DecodeLocale(argv[idx], &size);
         }
-        PySys_SetArgvEx(argc, wargv, 0);
-        for (int idx = 0; idx < argc; ++idx)
-        {
+
+        PySys_SetArgvEx(argc, wargv, 0); // set sys.argv
+        for (int idx = 0; idx < argc; ++idx) {
             PyMem_Free(wargv[idx]);
         }
         delete[] wargv;
+    }
+    { /********************** patch __builtins__ ********************/
+        auto module = PyImport_AddModule("builtins");
+        auto dict = PyObject_GetAttrString(module, "__dict__");
 
         // Fetch None from builtins
-        auto module_builtins = PyImport_AddModule("builtins");
-        auto module_builtins_dict = PyModule_GetDict(module_builtins);
-        OBJECT_NONE = PyDict_GetItemString(module_builtins_dict, "None");
-        FUNCTION_EXEC = PyDict_GetItemString(module_builtins_dict, "exec");
-        Py_DecRef(module_builtins);
-
-        // Module __main__
-        auto module_main = PyImport_AddModule("__main__");
-        Py_IncRef(module_main);
-
-
-        PyRun_SimpleString(load_module_ex_function_txt);
+        OBJECT_NONE = PyDict_GetItemString(dict, "None");
 
         auto exe_dir = get_this_executable_located_dir();
 
     #ifdef XBUS_LITE_PLATFORM_WINDOWS
         std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
-        PyModule_AddStringConstant(module_main, \
-                     "__executable_located_folder__", convert.to_bytes(exe_dir).c_str());
+        auto exe_dir_str = Py_Unicode_From_UTF8_Str(convert.to_bytes(exe_dir).c_str());
+        PyDict_SetItemString(dict, "__executable_located_folder__", exe_dir_str);
     #else  // Not On Windows
-        PyModule_AddStringConstant(module_main, \
-                     "__executable_located_folder__", exe_dir.c_str());
+        auto exe_dir_str = Py_Unicode_From_UTF8_Str(exe_dir.c_str());
+        PyDict_SetItemString(dict, "__executable_located_folder__", exe_dir_str);
     #endif// XBUS_LITE_PLATFORM_WINDOWS
 
-        static PyMethodDef methods_list[3];
+        static PyMethodDef methods_list[2];
 
         methods_list[0].ml_name  = "__load_embeded_module__";
         methods_list[0].ml_meth  = LoadEmbededModule;
         methods_list[0].ml_flags = 0x0008; // METH_O
         methods_list[0].ml_doc   = NULL;
 
-        methods_list[1].ml_name  = "__load_embeded_module_code_object__";
-        methods_list[1].ml_meth  = LoadEmbededModuleCodeObject;
-        methods_list[1].ml_flags = 0x0008; // METH_O
-        methods_list[1].ml_doc   = NULL;
-
-        PyModule_AddFunctions(module_main, methods_list);
-        // PyModule_AddFunctions(module_builtins, methods_list);
-
-        MODULE_MAIN_DICT = PyModule_GetDict(module_main);
+        PyModule_AddFunctions(module, methods_list);
     }
+    { /**********************     __main__      ********************/
+        auto module_main = PyImport_AddModule("__main__");
+        MODULE_MAIN_DICT = PyModule_GetDict(module_main);
+        Py_IncRef(MODULE_MAIN_DICT);
+    }
+    } /****************** using namespace PYTHON; ******************/
 
     return 0;
 }
