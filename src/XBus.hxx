@@ -180,11 +180,11 @@ public:
 
 struct Python
 {
-    static int Eval(const char* source);
-    static int Eval(const std::string& source);
-    static int Eval(const EmbededSourceLoader& source_url);
+    static bool Eval(const char* source);
+    static bool Eval(const std::string& source);
+    static bool Eval(const EmbededSourceLoader& source_url);
 
-    static int Initialize(int argc, char* argv[]);
+    static bool Initialize(int argc, char* argv[]);
 };
 
 }// namespace XBusLite

@@ -959,11 +959,14 @@ namespace PYTHON
 
     int (*PyRun_SimpleString)(const char* command);
 
-    int (*PyObject_Print)(PyObject *o, FILE *fp, int flags);
+    void (*PyErr_Clear)();
+    void (*PyErr_Print)();
+
+    int (*PyObject_Print)(PyObject* o, FILE* fp, int flags);
     PyObject* (*PyObject_CallObject)(PyObject* callable_object, PyObject* args);
 
     int (*PyObject_HasAttrString)(PyObject* o, const char* attr_name);
-    int (*PyObject_SetAttrString)(PyObject *o, const char *attr_name, PyObject *v);
+    int (*PyObject_SetAttrString)(PyObject* o, const char* attr_name, PyObject* v);
     PyObject* (*PyObject_GetAttrString)(PyObject* o, const char* attr_name);
 
     PyObject* (*PyTuple_New)(Py_ssize_t len);
@@ -1017,7 +1020,6 @@ using namespace PYTHON;
 
 PyObject* LoadEmbededModule(PyObject* self, PyObject* arg)
 {
-    // Py_IncRef(arg);
     auto size = PyUnicode_GetLength(arg);
     auto buffer = PyUnicode_AsUCS4Copy(arg);
 
@@ -1057,18 +1059,11 @@ PyObject* LoadEmbededModule(PyObject* self, PyObject* arg)
     auto module_object = PyImport_ExecCodeModuleObject(arg, code_object, arg, NULL);
 
     Py_DecRef(code_object);
-    // Py_DecRef(arg);
 
     return module_object;
 }
 
 }// end namespace
-
-void Py_Run_Txt(const char* txt) {
-    if( 0 != PYTHON::PyRun_SimpleString(txt) ){
-        throw std::runtime_error("::PyRun_SimpleString Failed");
-    }
-}
 
 auto Py_Object_Call(void* callable_object, void* args) {
     auto res = PYTHON::PyObject_CallObject(callable_object, args);
@@ -1116,23 +1111,29 @@ void Py_Ref_Dec(void* object) {
 }
 
 // Export To XBusLite For Public API
-int Python::Eval(const char* source)
+bool Python::Eval(const char* source)
 {
-    // __main__
-    return PYTHON::PyRun_SimpleString(source);
-    // TODO: check Py_Error
+    auto result = PYTHON::PyRun_SimpleString(source);
+    if( result == 0 ){
+        return true;
+    }
+    PYTHON::PyErr_Print();
+    return false;
 }
 
 // Export To XBusLite For Public API
-int Python::Eval(const std::string& source)
+bool Python::Eval(const std::string& source)
 {
-    // __main__
-    return PYTHON::PyRun_SimpleString(source.c_str());
-    // TODO: check Py_Error
+    auto result = PYTHON::PyRun_SimpleString(source.c_str());
+    if( result == 0 ){
+        return true;
+    }
+    PYTHON::PyErr_Print();
+    return false;
 }
 
 // Export To XBusLite For Public API
-int Python::Eval(const EmbededSourceLoader& source_loader)
+bool Python::Eval(const EmbededSourceLoader& source_loader)
 {
     auto source_url = source_loader.url();
 
@@ -1157,15 +1158,19 @@ int Python::Eval(const EmbededSourceLoader& source_loader)
     auto result_object = PYTHON::PyEval_EvalCode( code_object, \
                     PYTHON::MODULE_MAIN_DICT, PYTHON::MODULE_MAIN_DICT );
 
-    PYTHON::Py_DecRef(result_object);
     PYTHON::Py_DecRef(code_object);
 
-    // TODO: check Py_Error
-    return 0;
+    if(result_object == NULL){
+        PYTHON::PyErr_Print();
+        return false;
+    }
+
+    PYTHON::Py_DecRef(result_object);
+    return true;
 }
 
 // Export To XBusLite For Public API
-int Python::Initialize(int argc, char* argv[])
+bool Python::Initialize(int argc, char* argv[])
 {
     // printf("%s %s\n", __FILE__, __FUNCTION__);
 
@@ -1213,6 +1218,9 @@ int Python::Initialize(int argc, char* argv[])
         X_LOAD_PY_FUN_PTR(Py_DecodeLocale);
 
         X_LOAD_PY_FUN_PTR(PyMem_Free);
+
+        X_LOAD_PY_FUN_PTR(PyErr_Clear);
+        X_LOAD_PY_FUN_PTR(PyErr_Print);
 
         X_LOAD_PY_FUN_PTR(Py_DecRef);
         X_LOAD_PY_FUN_PTR(Py_IncRef);
@@ -1294,7 +1302,7 @@ int Python::Initialize(int argc, char* argv[])
     }
     } /****************** using namespace PYTHON; ******************/
 
-    return 0;
+    return true;
 }
 
 #ifdef XBUS_SOURCE_FOR_CLIENT_HOST

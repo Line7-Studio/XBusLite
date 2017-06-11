@@ -21,7 +21,8 @@ def resource_file_to_embeded_data_EXEC(resource_file: str):
                 break
     in_file_hash = hash_fun.hexdigest().upper()
 
-    code_object = compile(in_source_source, '<string>', 'exec', dont_inherit=False)
+    # code_object = compile(in_source_source, '<string>', 'exec', dont_inherit=False)
+    code_object = compile(in_source_source, resource_file, 'exec', dont_inherit=False)
 
     return marshal.dumps(code_object)
 
