@@ -47,7 +47,7 @@ function(xbus_embed_source_code target_name)
     endif()
 
     set(base_output_dir ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY})
-    set(output_dir ${base_output_dir}/xbus_lite.dir/bc2so.dir)
+    set(output_dir ${base_output_dir}/xbus_lite.dir/bc2so.dir/${target_name}/)
 
     # create generated store file path
     file(RELATIVE_PATH relative_file_path ${CMAKE_CURRENT_SOURCE_DIR} ${input_file_path})
@@ -84,6 +84,24 @@ function(xbus_embed_source_code target_name)
 endfunction()
 
 
+# export function for public use
+function(xbus_embed_source_code_list target_name)
+
+    list(LENGTH ARGN argn_lenght)
+
+    while(NOT argn_lenght EQUAL 0)
+        list(GET ARGN 0 arg_0)
+        list(GET ARGN 1 arg_1)
+        list(GET ARGN 2 arg_2)
+        list(GET ARGN 3 arg_3)
+        list(REMOVE_AT ARGN 0 1 2 3)
+
+        xbus_embed_source_code(${target_name} ${arg_0} ${arg_1} ${arg_2} ${arg_3})
+
+        list(LENGTH ARGN argn_lenght)
+    endwhile()
+
+endfunction()
 
 # export function for public use
 function(xbus_add_client xbus_server_name KEYWORD_SRC)
