@@ -3,7 +3,7 @@
 #include <gtest/gtest.h>
 
 
-TEST(Create, One)
+TEST(CreateClient, One)
 {
     XBus::CreateClient("Client/A");
 
@@ -16,7 +16,7 @@ TEST(Create, One)
     // std::this_thread::sleep_for(std::chrono::seconds(1));
 }
 
-TEST(Create, Multi)
+TEST(CreateClient, Multi)
 {
     XBus::CreateClient("Client/B");
     XBus::CreateClient("Client/C");
@@ -35,7 +35,7 @@ TEST(Create, Multi)
     // std::this_thread::sleep_for(std::chrono::seconds(1));
 }
 
-TEST(Create, RenameClient)
+TEST(CreateClient, RenameClient)
 {
     XBus::CreateClient("Client/A", "Host/A");
     XBus::CreateClient("Client/B", "Host/B");
@@ -59,6 +59,8 @@ TEST(Create, RenameClient)
 
     // std::this_thread::sleep_for(std::chrono::seconds(1));
 }
+
+
 
 int main(int argc, char *argv[])
 {

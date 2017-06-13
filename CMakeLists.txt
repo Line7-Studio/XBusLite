@@ -19,10 +19,10 @@ else()
 endif()
 
 # all unit test
-list(APPEND xbus_unit_test "create_client")
 list(APPEND xbus_unit_test "knock_knock")
-list(APPEND xbus_unit_test "task_execution")
 list(APPEND xbus_unit_test "embed_module")
+list(APPEND xbus_unit_test "create_client")
+list(APPEND xbus_unit_test "task_execution")
 
 foreach(this ${xbus_unit_test})
 

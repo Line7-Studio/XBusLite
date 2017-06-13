@@ -4,14 +4,11 @@ auto client_python_source = R"(
 
 embed_module = __load_embeded_module__(':EmbededSource')
 
-fun_0 = embed_module.fun_0
-fun_1 = embed_module.fun_1
-fun_2 = embed_module.fun_2
-fun_3 = embed_module.fun_3
+fun = embed_module.fun
 
 )";
 
-bool init_client(std::map<std::string, std::string>& /*args*/)
+bool init_client_a(std::map<std::string, std::string>& /*args*/)
 {
     printf("%s %s\n", __FILE__, __FUNCTION__);
 
@@ -21,4 +18,17 @@ bool init_client(std::map<std::string, std::string>& /*args*/)
 
 }
 
-XBUS_REGISTE_CLIENT("Client", init_client);
+XBUS_REGISTE_CLIENT("Client/A", init_client_a);
+
+
+bool init_client_b(std::map<std::string, std::string>& /*args*/)
+{
+    printf("%s %s\n", __FILE__, __FUNCTION__);
+
+    XBus::Python::Eval(XBus::EmbededSourceLoader(":EmbededSource"));
+
+    return true;
+
+}
+
+XBUS_REGISTE_CLIENT("Client/B", init_client_b);

@@ -9,6 +9,8 @@
 #include <thread>
 #include <utility>
 
+#include <memory>
+
 #include <stdexcept>
 #include <functional>
 

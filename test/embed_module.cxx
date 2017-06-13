@@ -1,63 +1,21 @@
 #include <XBus.hxx>
-#include <XBus.Json.hxx>
 
 #include <gtest/gtest.h>
 
-class XBusClient
-{
-public:
-    class Job: public XBusLite::Job
-    {
-    public:
-        Job(const XBusLite::Job& job)
-        :XBusLite::Job(job)
-        {
-        }
-    public:
-        XBus::Json waitForResult() const
-        {
-            return XBus::Json::parse(XBusLite::Job::waitForSerializedResult());
-        }
-    };
-public:
-    XBusClient(const std::string& client_name)
-    :m_client_name(client_name)
-    {
-    }
-public:
-    Job execute(const std::string& function_name)
-    {
-        return Job(XBus::Execute(m_client_name, function_name));
-    };
-public:
-    Job execute(const std::string& function_name, \
-                const std::string& serialized_function_parameters)
-    {
-        return Job(XBus::Execute(m_client_name, function_name, \
-                                                serialized_function_parameters));
-    }
-public:
-    Job execute(const std::string& function_name, const XBus::Json& parameters)
-    {
-        return execute(function_name, parameters.dump());
-    }
-private:
-    const std::string m_client_name;
-};
 
-
-TEST(Execution, SyncNoParameters)
+TEST(EmbedModule, EvalStr)
 {
-    auto client = std::make_unique<XBusClient>("Client");
-    {
-        auto job = client->execute("fun_0");
-        ASSERT_EQ(job.waitForSerializedResult(), std::string("null"));
-    }
-    {
-        auto job = client->execute("fun_1");
-        ASSERT_EQ(job.waitForSerializedResult(), std::string("\"hello xbus\""));
-    }
+    auto job = XBus::Execute("Client/A", "fun");
+    ASSERT_EQ(job.waitForSerializedResult(), std::string("[true, null]"));
 }
+
+
+TEST(EmbedModule, EvalEmbededSourceLoader)
+{
+    auto job = XBus::Execute("Client/B", "fun");
+    ASSERT_EQ(job.waitForSerializedResult(), std::string("[true, null]"));
+}
+
 
 
 int main(int argc, char *argv[])
@@ -74,8 +32,11 @@ int main(int argc, char *argv[])
 #endif // XBUS_LITE_PLATFORM_WINDOWS
     ::testing::InitGoogleTest(&argc, argv);
 
-    XBus::CreateClient("Client");
-    XBus::WaitClientInitialized("Client");
+    XBus::CreateClient("Client/A");
+    XBus::WaitClientInitialized("Client/A");
+
+    XBus::CreateClient("Client/B");
+    XBus::WaitClientInitialized("Client/B");
 
     return RUN_ALL_TESTS();
 }

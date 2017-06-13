@@ -747,7 +747,7 @@ void CreateClient(const str_t& client_name, \
     DWORD creation_flags = CREATE_UNICODE_ENVIRONMENT;
     creation_flags |= CREATE_BREAKAWAY_FROM_JOB;
     // creation_flags |= DETACHED_PROCESS;
-    // creation_flags |= CREATE_NEW_CONSOLE;
+    creation_flags |= CREATE_NEW_CONSOLE;
 
     // do not forget the space between arguments
     std::wstringstream args;
@@ -1322,24 +1322,47 @@ import json as xbus_json
 
 xbus.declare = type('xbus.declare', (object, ), {})()
 
-xbus.__declared_functions__ = {}
+xbus.__declared_functions_no_arguments__ = {}
+xbus.__declared_functions_has_arguments__ = {}
+
 
 def function(real_function):
-    def xbus_function_wrapper(*args, **kwargs):
-        return real_function(*args, **kwargs)
-    xbus.__declared_functions__[real_function.__name__] = xbus_function_wrapper
+    from inspect import signature
+    fs_para = signature(real_function).parameters.values()
+
+    if len(fs_para) == 0:
+        xbus.__declared_functions_no_arguments__[real_function.__name__] = real_function
+    else:
+        xbus.__declared_functions_has_arguments__[real_function.__name__] = real_function
     return real_function
 
 xbus.declare.function = function
 
+
 def function(fun_name: str):
-    return xbus_json.dumps(xbus.__declared_functions__[fun_name]())
+    try:
+        result = xbus.__declared_functions_no_arguments__[fun_name]()
+    except Exception as error:
+        print("XBus Wrappred Function Execute Error\n", error)
+        result_info_list = [False, error]
+    else:
+        result_info_list = [True, result]
+    finally:
+        return xbus_json.dumps(result_info_list)
 
 xbus.__execute_json_serialized_no_parameters_function__ = function
 
+
 def function(fun_name: str, fun_para: str):
-    return xbus_json.dumps( \
-             xbus.__declared_functions__[fun_name](xbus_json.loads(fun_para)))
+    try:
+        result = xbus.__declared_functions_has_arguments__[fun_name](**xbus_json.loads(fun_para))
+    except Exception as error:
+        print("XBus Wrappred Function Execute Error\n", error)
+        result_info_list = [False, error]
+    else:
+        result_info_list = [True, result]
+    finally:
+        return xbus_json.dumps(result_info_list)
 
 xbus.__execute_json_serialized_with_parameters_function__ = function
 
