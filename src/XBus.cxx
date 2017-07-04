@@ -1343,7 +1343,8 @@ def function(fun_name: str):
     try:
         result = xbus.__declared_functions_no_arguments__[fun_name]()
     except Exception as error:
-        print("XBus Wrappred Function Execute Error\n", error)
+        print("XBus Wrappred Function Execute Error:")
+        print("%s"%fun_name, "Error: \"%s\""%str(error))
         result_info_list = [False, error]
     else:
         result_info_list = [True, result]
@@ -1357,7 +1358,8 @@ def function(fun_name: str, fun_para: str):
     try:
         result = xbus.__declared_functions_has_arguments__[fun_name](**xbus_json.loads(fun_para))
     except Exception as error:
-        print("XBus Wrappred Function Execute Error\n", error)
+        print("XBus Wrappred Function Execute Error:")
+        print("%s"%fun_name, "Error: \"%s\""%str(error))
         result_info_list = [False, error]
     else:
         result_info_list = [True, result]
