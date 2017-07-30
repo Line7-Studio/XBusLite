@@ -146,6 +146,10 @@ function(xbus_add_client xbus_server_name KEYWORD_SRC)
     get_target_property(server_host_name ${xbus_server_name} RUNTIME_OUTPUT_NAME)
     get_target_property(server_host_dir ${xbus_server_name} RUNTIME_OUTPUT_DIRECTORY)
 
+    if(NOT server_host_dir)
+        return()
+    endif()
+
     # this is the default dir, eg. same as the server
     set_target_properties(${xbus_server_name}_xbus_client_host PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY ${server_host_dir})
@@ -170,13 +174,9 @@ function(xbus_set_client xbus_server_name ARG_TYPE)
 
 
     if(${ARG_TYPE} STREQUAL "EXECUTABLE_DIR")
-        get_target_property(server_host_dir ${xbus_server_name} RUNTIME_OUTPUT_DIRECTORY)
-
-        set(the_runtime_dir ${server_host_dir}/${ARGN})
-
         set_target_properties(${xbus_server_name}_xbus_client_host
-                                PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${the_runtime_dir})
-        set(${xbus_server_name}_client_EXECUTABLE_DIR ${the_runtime_dir} PARENT_SCOPE)
+                                PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ARGN})
+        set(${xbus_server_name}_client_EXECUTABLE_DIR ${ARGN} PARENT_SCOPE)
     endif()
 
 
