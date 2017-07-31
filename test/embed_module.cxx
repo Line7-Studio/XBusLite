@@ -28,7 +28,8 @@ int main(int argc, char *argv[])
     // XBus::PythonRuntimeFilePath() = L"E:\\Python\\3.4\\x32\\python34.dll";
 #else // Not On Windows
     XBus::ClientHostFilePath() = "xbus_client_host/embed_module";
-    XBus::PythonRuntimeFilePath() = "/usr/local/Cellar/python3/3.6.1/Frameworks/Python.framework/Versions/3.6/Python";
+    // XBus::PythonRuntimeFilePath() = "/usr/local/Cellar/python3/3.6.2/Frameworks/Python.framework/Versions/3.6/Python";
+    XBus::PythonRuntimeFilePath() = "/Users/joseph/Projects/_tmp/Versions/3.6/Python";
 #endif // XBUS_LITE_PLATFORM_WINDOWS
     ::testing::InitGoogleTest(&argc, argv);
 
