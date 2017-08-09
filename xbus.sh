@@ -22,6 +22,7 @@ init_xbus()
 build_xbus()
 {
     cmake_args="-G Ninja"
+    cmake_args="$cmake_args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
     if [ "$XBUS_BUILD_TYPE" == "release" ]; then
         cmake_args="$cmake_args -DCMAKE_BUILD_TYPE=Release"
     else

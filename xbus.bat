@@ -68,6 +68,7 @@ if /I %SUPPORT_WINDOWS_XP%==true (
 )
 
 set cmake_args=-G Ninja
+set cmake_args=!cmake_args! -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 if /I %xbus_build_type%==release (
     set cmake_args=!cmake_args! -DCMAKE_BUILD_TYPE=Release
