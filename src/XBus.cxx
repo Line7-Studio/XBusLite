@@ -114,7 +114,7 @@ const file_path_t generate_a_random_file_name(const int random_str_len)
 file_path_t check_and_formal_file_path(const file_path_t& file_path)
 {
 #ifdef XBUS_LITE_PLATFORM_WINDOWS
-    auto attr = ::GetFileAttributes(file_path.c_str());
+    const auto attr = ::GetFileAttributes(file_path.c_str());
     if( attr == INVALID_FILE_ATTRIBUTES ){
         throw std::runtime_error(__FUNCTION__" ::GetFileAttributes Failed");
     }
@@ -737,7 +737,7 @@ void CreateClient(const str_t& client_name, \
     // then create client process
 #ifdef XBUS_LITE_PLATFORM_WINDOWS
 
-    PROCESS_INFORMATION prcInfo;
+    PROCESS_INFORMATION prcInfo = {};
     STARTUPINFOW startupInfo = { sizeof( STARTUPINFO ), 0, 0, 0,             \
                                  (DWORD)CW_USEDEFAULT, (DWORD)CW_USEDEFAULT, \
                                  (DWORD)CW_USEDEFAULT, (DWORD)CW_USEDEFAULT, \
@@ -838,9 +838,9 @@ void CreateClient(const str_t& client_name, \
 
 bool IsClientInitialized(const str_t& client_name)
 {
-    auto shared_mem = ClientNameToServerSideSharedMem(client_name);
+    auto const shared_mem = ClientNameToServerSideSharedMem(client_name);
 
-    auto state = reinterpret_cast<ClientInitState*>(shared_mem->data());
+    auto const state = reinterpret_cast<ClientInitState*>(shared_mem->data());
 
     switch( *state )
     {
@@ -1819,7 +1819,7 @@ Job::State::Enum Job::fetchJobResultState() const
     tube->request.write<uint32_t>(RequestType::FETCH_JOB_STATE);
     tube->request.write<uint32_t>(id());
 
-    auto state = tube->response.read<uint32_t>();
+    const auto state = tube->response.read<uint32_t>();
 
     return Job::State::Enum(state);
 }
@@ -1831,7 +1831,7 @@ str_t Job::fetchSerializedResult() const
     tube->request.write<uint32_t>(RequestType::FETCH_JOB_RESULT);
     tube->request.write<uint32_t>(id());
 
-    auto result = tube->response.read<str_t>();
+    const auto result = tube->response.read<str_t>();
 
     return result;
 }
