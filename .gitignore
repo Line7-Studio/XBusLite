@@ -1,3 +1,9 @@
+
+# exclude build cache dir
 tmp/
 
+# macOS
 .DS_Store
+
+# Windows
+Thumbs.db
