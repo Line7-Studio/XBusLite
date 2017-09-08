@@ -749,13 +749,12 @@ void CreateClient(const str_t& client_name, \
     // creation_flags |= DETACHED_PROCESS;
     creation_flags |= CREATE_NEW_CONSOLE;
 
-    // do not forget the space between arguments
-    std::wstringstream args;
-    args << ::GetCommandLine() << L" ";
-    args << L"--shared_mem="<< shared_mem->name() << L" ";
-
     auto client_host_executable = get_this_executable_located_dir() \
                                         + L"\\"+ ClientHostFilePath();
+
+    // do not forget the space between arguments
+    std::wstringstream args;
+    args << L"--shared_mem="<< shared_mem->name() << L" ";
 
     // According MSDN, CreateProcess unicode version
     // here we maybe have a bug with const_cast

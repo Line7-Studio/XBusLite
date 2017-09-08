@@ -1,5 +1,12 @@
-import xbus
 
+import sys
+print(sys.argv)
+
+import time
+
+time.sleep(10)
+
+import xbus
 
 @xbus.declare.function
 def Return_None():
@@ -26,7 +33,6 @@ def Return_Array():
     return [0, 1, 2, '3', [4, 5, 6.0], -7]
 
 
-
 @xbus.declare.function
 def Echo_One(arg_1):
     return arg_1
@@ -35,6 +41,5 @@ def Echo_One(arg_1):
 @xbus.declare.function
 def Echo_Two_Swap(arg_1, arg_2):
     return arg_2, arg_1
-
 
 
