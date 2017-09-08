@@ -752,8 +752,10 @@ void CreateClient(const str_t& client_name, \
     auto client_host_executable = get_this_executable_located_dir() \
                                         + L"\\"+ ClientHostFilePath();
 
-    // do not forget the space between arguments
+    // 1. do not forget the space between arguments
+    // 2. need qute for white space chars
     std::wstringstream args;
+    args << L"\"" << client_host_executable << L"\" ";
     args << L"--shared_mem="<< shared_mem->name() << L" ";
 
     // According MSDN, CreateProcess unicode version

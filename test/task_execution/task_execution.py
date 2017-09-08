@@ -1,11 +1,3 @@
-
-import sys
-print(sys.argv)
-
-import time
-
-time.sleep(10)
-
 import xbus
 
 @xbus.declare.function
@@ -41,5 +33,4 @@ def Echo_One(arg_1):
 @xbus.declare.function
 def Echo_Two_Swap(arg_1, arg_2):
     return arg_2, arg_1
-
 
