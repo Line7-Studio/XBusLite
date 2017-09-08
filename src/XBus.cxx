@@ -100,7 +100,7 @@ const file_path_t generate_a_random_file_name(const int random_str_len)
 #ifdef XBUS_LITE_PLATFORM_WINDOWS
     const std::wstring alphanums = L"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 #else // not on Windows
-     const std::string alphanums = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const std::string alphanums = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 #endif // XBUS_LITE_PLATFORM_WINDOWS
     std::mt19937 rg{std::random_device{}()};
     std::uniform_int_distribution<> pick(0, int(alphanums.size()) - 1);
