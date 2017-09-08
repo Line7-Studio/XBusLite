@@ -1,6 +1,6 @@
 #include <XBus.hxx>
 
-int init_client(std::map<std::string, std::string>& /*args*/)
+bool init_client(std::map<std::string, std::string>& /*args*/)
 {
     printf("%s %s\n", __FILE__, __FUNCTION__);
 
