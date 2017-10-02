@@ -2,6 +2,79 @@
 
 XBUS_BUILD_TYPE=release
 
+################################################################################
+os_check()
+{
+    case `uname` in
+        Linux)
+            date=date
+            os_name=Linux
+            ;;
+        Darwin)
+            date=gdate # use gnu date
+            os_name=macOS
+            ;;
+        FreeBSD)
+            date=date #???
+            os_name=FreeBSD
+            ;;
+        *_NT-*)
+            date=date #???
+            os_name=Windows
+            ;;
+        *)
+            echo "none support os"
+            exit -1
+            ;;
+    esac
+    build_dir="tmp/build_$os_name"
+}
+os_check
+
+################################################################################
+function check_compiler_tools()
+{
+    if [ "$os_name" = "Windows" ]; then
+        hash cl &> /dev/null
+        if [ $? -eq 0 ] ; then
+            have_cxx=true
+            # tell cmake select msvc toolset
+            set CC=cl
+            set CXX=cl
+            set ld=link
+        fi
+    else
+        hash g++ &> /dev/null
+        if [ $? -eq 0 ] ; then
+            have_cxx=true
+        fi
+
+        hash clang++ &> /dev/null
+        if [ $? -eq 0 ] ; then
+            have_cxx=true
+        fi
+    fi
+
+    if [ ! $have_cxx ] ; then
+        echo "c++ compiler not found in path"
+        exit -1
+    fi
+
+    hash cmake &> /dev/null
+    if [ $? -eq 1 ] ; then
+        echo "cmake not found in path"
+        exit -1
+    fi
+
+    hash ninja &> /dev/null
+    if [ $? -eq 1 ] ; then
+        echo "ninja-build not found in path"
+        exit -1
+    fi
+}
+check_compiler_tools
+
+################################################################################
 print_help_doc()
 {
     echo " 0:  init      [generate xbus project depend files     ]"
@@ -29,72 +102,65 @@ build_xbus()
         cmake_args="$cmake_args -DCMAKE_BUILD_TYPE=Debug"
     fi
 
-    echo "generate cmake files"
-    mkdir -p tmp/build
-    pushd tmp/build >/dev/null
-    cmake $cmake_args ../..
-    popd >/dev/null
+    mkdir -p $build_dir
+    pushd $build_dir >/dev/null
 
+    echo -e 'generate cmake files'
+    cmake $cmake_args ../..
     echo "ninja build"
-    pushd tmp/build > /dev/null
     ninja
+
     popd > /dev/null
 }
 
 clean_xbus()
 {
-    rm -rf tmp/build
-    rm -rf dst/*
+    rm -rf tmp
 }
 
 test_xbus()
 {
-    pushd tmp/build > /dev/null
+    pushd $build_dir >/dev/null
     ctest -V
     popd > /dev/null
 }
 
+## TODO: ???
 pack_xbus()
 {
-    pushd tmp/build > /dev/null
+    pushd $build_dir >/dev/null
     popd > /dev/null
 }
 
+################################################################################
 # main function
+build_start_time=`$date +%s%3N`
 
-for var in "$@"
-    do
-    case $var in
+case $@ in
     init)
         init_xbus
-    exit 0
     ;;
     build)
         build_xbus
-    exit 0
     ;;
     clean)
         clean_xbus
-    exit 0
     ;;
     test)
         test_xbus
-    exit 0
     ;;
     pack)
         pack_xbus
-    exit 0
     ;;
     help)
         print_help_doc
-    exit 0
     ;;
-    GEN_CLIENT_HOST_SRC)
-        gen_client_host_src $2
-    exit 0
+    *)
+        echo "bad command! valid command are:"
+        print_help_doc
+        exit -1
     ;;
-    esac
-done
+esac
 
-echo "bad command! valid command are:"
-print_help_doc
+build_end_time=`$date +%s%3N`
+echo "use time $((build_end_time-build_start_time)) ms"
