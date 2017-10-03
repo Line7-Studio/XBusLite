@@ -1,5 +1,8 @@
 #include "XBus.hxx"
 
+#include <cstddef> // std::ptrdiff_t
+#include <cstring> // std::strlen
+
 #include <queue>
 #include <vector>
 #include <sstream>
@@ -40,6 +43,9 @@
     #include <mach-o/dyld.h> // for module path
 #endif //XBUS_LITE_PLATFORM_DARWIN
 
+#ifdef XBUS_LITE_PLATFORM_LINUX
+    #include <linux/limits.h> // for PATH_MAX
+#endif //XBUS_LITE_PLATFORM_LINUX
 
 namespace XBusLite
 {
@@ -147,7 +153,7 @@ file_path_t check_and_formal_file_path(const file_path_t& file_path)
 
     if(fixed_file_path_ptr == nullptr)
     {
-        printf("%s realpath error: %s\n", __FUNCTION__, strerror(errno));
+        printf("%s realpath error: %s\n", __FUNCTION__, ::strerror(errno));
         throw std::runtime_error("::realpath failed");
     }
     // TODO: need formal??
@@ -515,7 +521,7 @@ static T read_pipe_for_buffer(pipe_handle_t pipe_handle)
 #else // Not On Windows
     auto read_pipe = std::bind(::read, pipe_handle, _1, _2);
 
-    if( read_pipe(data_buffer, buffer_size) != buffer_size )
+    if( read_pipe(data_buffer, buffer_size) != ssize_t(buffer_size) )
     {
         printf("%s ::read failed 2\n", __FUNCTION__);
         throw std::runtime_error(str_t(__FUNCTION__)+" ::read failed 2");
@@ -560,7 +566,7 @@ static void write_pipe_for_buffer(pipe_handle_t pipe_handle, const T& buffer)
 #else // Not On Windows
     auto write_pipe = std::bind(::write, pipe_handle, _1, _2);
 
-    if( write_pipe(data_buffer, buffer_size) != buffer_size )
+    if( write_pipe(data_buffer, buffer_size) != ssize_t(buffer_size) )
     {
         printf("%s ::write failed 2\n", __FUNCTION__);
         throw std::runtime_error(str_t(__FUNCTION__)+" ::write failed 2");
@@ -796,6 +802,7 @@ void CreateClient(const str_t& client_name, \
     posix_spawn_file_actions_t file_actions;
     posix_spawn_file_actions_init(&file_actions);
 
+    #ifdef XBUS_LITE_PLATFORM_DARWIN
     posix_spawn_file_actions_addinherit_np(&file_actions, \
                                     communication_tube->request.for_read);
     posix_spawn_file_actions_addinherit_np(&file_actions, \
@@ -804,12 +811,17 @@ void CreateClient(const str_t& client_name, \
                                     communication_tube->response.for_read);
     posix_spawn_file_actions_addinherit_np(&file_actions, \
                                     communication_tube->response.for_write);
+    #else // Not on macOS
 
-    // posix_spawn_file_actions_addopen(&file_actions, \
-    //                         STDOUT_FILENO, "/dev/null", O_WRONLY, 0);
+    #endif // XBUS_LITE_PLATFORM_DARWIN
 
-    // posix_spawn_file_actions_addopen(&file_actions, \
-    //                         STDERR_FILENO, "/dev/null", O_WRONLY, 0);
+    /*
+    posix_spawn_file_actions_addopen(&file_actions, \
+                            STDOUT_FILENO, "/dev/null", O_WRONLY, 0);
+
+    posix_spawn_file_actions_addopen(&file_actions, \
+                            STDERR_FILENO, "/dev/null", O_WRONLY, 0);
+    */
 
     auto success = ::posix_spawn(&process_handle, \
                         client_host_executable.c_str(), \
@@ -1703,6 +1715,21 @@ void* child_thread_handle_server_termination(void* /*arguments*/)
     return nullptr;
 }
 #endif // XBUS_LITE_PLATFORM_DARWIN
+
+#ifdef XBUS_LITE_PLATFORM_LINUX
+// kill the client when server process terminate
+void* child_thread_handle_server_termination(void* /*arguments*/)
+{
+    // int kq = kqueue();
+    // struct kevent kev;
+    // EV_SET(&kev, getppid(), EVFILT_PROC, EV_ADD|EV_ENABLE, NOTE_EXIT, 0, NULL);
+
+    // (void) kevent(kq, &kev, 1, &kev, 1, NULL);
+    // exit(EXIT_SUCCESS);
+
+    return nullptr;
+}
+#endif // XBUS_LITE_PLATFORM_LINUX
 
 int ClientHostMain(int argc, char* argv[])
 {

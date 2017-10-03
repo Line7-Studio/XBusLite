@@ -7,14 +7,22 @@ set(xbus_lite_dir ${CMAKE_CURRENT_LIST_DIR})
 # set compiler and link
 if(CMAKE_SYSTEM_NAME STREQUAL Linux)
     add_definitions(-DXBUS_LITE_PLATFORM_LINUX=1)
-elseif(CMAKE_SYSTEM_NAME STREQUAL Darwin)
-    add_definitions(-DXBUS_LITE_PLATFORM_DARWIN=1)
-elseif(CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
-    add_definitions(-DXBUS_LITE_PLATFORM_FREEBSD=1)
-elseif(CMAKE_SYSTEM_NAME STREQUAL Windows)
-    add_definitions(-DXBUS_LITE_PLATFORM_WINDOWS=1)
+    find_library(libdl dl)
+    find_library(librt rt)
+    find_library(libpthread pthread)
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
+    add_definitions(-DXBUS_LITE_PLATFORM_DARWIN=1)
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
+    add_definitions(-DXBUS_LITE_PLATFORM_FREEBSD=1)
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL Windows)
+    add_definitions(-DXBUS_LITE_PLATFORM_WINDOWS=1)
+endif()
 
 # export function for public use
 function(xbus_embed_source_code target_name)
@@ -145,6 +153,13 @@ function(xbus_add_client xbus_server_name KEYWORD_SRC)
 
     get_target_property(server_host_name ${xbus_server_name} RUNTIME_OUTPUT_NAME)
     get_target_property(server_host_dir ${xbus_server_name} RUNTIME_OUTPUT_DIRECTORY)
+
+    if(CMAKE_SYSTEM_NAME STREQUAL Linux)
+        target_link_libraries(${xbus_server_name}
+                        ${librt} ${libdl} ${libpthread})
+        target_link_libraries(${xbus_server_name}_xbus_client_host
+                        ${librt} ${libdl} ${libpthread})
+    endif()
 
     if(NOT server_host_dir)
         return()
