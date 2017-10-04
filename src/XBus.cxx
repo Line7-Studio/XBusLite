@@ -26,15 +26,22 @@
     #define NOMINMAX
     #define WIN32_LEAN_AND_MEAN
     #include <Windows.h>
-#else
-    #include <fcntl.h>
-    #include <spawn.h>
-    #include <signal.h>
-    #include <unistd.h>
-    #include <sys/mman.h>
-    #include <dlfcn.h>     // for dynamic load python
-    // extern char **environ; // posix_spawn environ
 #endif //XBUS_LITE_PLATFORM_WINDOWS
+
+#if defined(XBUS_LITE_PLATFORM_LINUX) \
+ || defined(XBUS_LITE_PLATFORM_DARWIN) \
+ || defined(XBUS_LITE_PLATFORM_FREEBSD)
+    #include <dlfcn.h> // dynamic load functions for python
+    #include <spawn.h> // for posix spawn functions
+    #include <unistd.h> // for read & write functions
+    #include <fcntl.h>  // for O_* constants
+    #include <sys/stat.h> // for S_* constants
+    #include <sys/mman.h> // for shm_XXX functions
+#endif
+
+#ifdef XBUS_LITE_PLATFORM_LINUX  // shm_XXX functions
+    #include <linux/limits.h> // for PATH_MAX
+#endif //XBUS_LITE_PLATFORM_LINUX
 
 #ifdef XBUS_LITE_PLATFORM_DARWIN
     #include <sys/types.h> // for kqueue
@@ -43,9 +50,10 @@
     #include <mach-o/dyld.h> // for module path
 #endif //XBUS_LITE_PLATFORM_DARWIN
 
-#ifdef XBUS_LITE_PLATFORM_LINUX
-    #include <linux/limits.h> // for PATH_MAX
-#endif //XBUS_LITE_PLATFORM_LINUX
+#ifdef XBUS_LITE_PLATFORM_FREEBSD  // shm_XXX functions
+
+#endif //XBUS_LITE_PLATFORM_FREEBSD
+
 
 namespace XBusLite
 {
