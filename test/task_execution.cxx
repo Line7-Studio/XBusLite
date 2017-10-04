@@ -254,16 +254,18 @@ int main(int argc, char *argv[])
 
 #ifdef XBUS_LITE_PLATFORM_WINDOWS
     XBus::ClientHostFilePath() = L"xbus_client_host\\task_execution.exe";
-    XBus::PythonRuntimeFilePath() = L"E:\\Python\\3.6\\x64\\python36.dll";
-    // XBus::PythonRuntimeFilePath() = L"E:\\Python\\3.6\\x32\\python36.dll";
-    // XBus::PythonRuntimeFilePath() = L"E:\\Python\\3.4\\x32\\python34.dll";
 #else // Not On Windows
     XBus::ClientHostFilePath() = "xbus_client_host/task_execution";
-    XBus::PythonRuntimeFilePath() = "/usr/local/Cellar/python3/3.6.2/Frameworks/Python.framework/Versions/3.6/Python";
-    // XBus::PythonRuntimeFilePath() = "/Users/joseph/Projects/_tmp/Versions/3.6/Python";
-    // XBus::PythonRuntimeFilePath() = "/Users/joseph/Projects/XBusLite/bin/python_runtime/Versions/3.6/Python";
-    // XBus::PythonRuntimeFilePath() = "./python_runtime/3.6/Python";
 #endif // XBUS_LITE_PLATFORM_WINDOWS
+
+#ifdef XBUS_LITE_PLATFORM_WINDOWS
+    XBus::PythonRuntimeFilePath() = L"E:\\Python\\3.6\\x64\\python36.dll";
+#endif // XBUS_LITE_PLATFORM_WINDOWS
+
+#ifdef XBUS_LITE_PLATFORM_DARWIN
+    XBus::PythonRuntimeFilePath() = "/usr/local/Cellar/python3/3.6.3/Frameworks/Python.framework/Versions/3.6/Python";
+#endif // XBUS_LITE_PLATFORM_DARWIN
+
     ::testing::InitGoogleTest(&argc, argv);
 
     XBus::CreateClient("Client");
