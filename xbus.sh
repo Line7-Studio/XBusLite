@@ -7,19 +7,19 @@ os_check()
 {
     case `uname` in
         Linux)
-            date=date
+            current_date="date +%s%3N"
             os_name=Linux
             ;;
         Darwin)
-            date=gdate # use gnu date
+            current_date="gdate +%s%3N" # use gnu date
             os_name=macOS
             ;;
         FreeBSD)
-            date=date #???
+            current_date="date +%s000" # bsd date ???
             os_name=FreeBSD
             ;;
         *_NT-*)
-            date=date #???
+            current_date="date +%s%3N"
             os_name=Windows
             ;;
         *)
@@ -134,7 +134,7 @@ pack_xbus()
 
 ################################################################################
 # main function
-build_start_time=`$date +%s%3N`
+build_start_time=`$current_date`
 
 case $@ in
     init)
@@ -162,5 +162,5 @@ case $@ in
     ;;
 esac
 
-build_end_time=`$date +%s%3N`
+build_end_time=`$current_date`
 echo "use time $((build_end_time-build_start_time)) ms"
