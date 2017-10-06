@@ -39,9 +39,9 @@ function check_compiler_tools()
         if [ $? -eq 0 ] ; then
             have_cxx=true
             # tell cmake select msvc toolset
-            set CC=cl
-            set CXX=cl
-            set ld=link
+            export cc=cl
+            export cxx=cl
+            export ld=link
         fi
     else
         hash g++ &> /dev/null
