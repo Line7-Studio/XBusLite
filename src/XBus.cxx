@@ -74,6 +74,13 @@ std::map<str_t, client_init_function_t>& ClientNameToInitFunction()
     return kv;
 }
 
+std::map<str_t, embedded_c_function_t>& EmbededFunctionNameToFunction()
+{
+    static std::map<str_t, embedded_c_function_t> kv;
+    return kv;
+}
+
+
 std::map<str_t, process_handle_t>& ClientNameToChildProcessHandle()
 {
     static std::map<str_t, process_handle_t> kv;
@@ -983,6 +990,8 @@ namespace PYTHON
     void (*PyErr_Clear)();
     void (*PyErr_Print)();
 
+    PyObject* (*PyLong_FromVoidPtr)(void* p);
+
     int (*PyObject_Print)(PyObject* o, FILE* fp, int flags);
     PyObject* (*PyObject_CallObject)(PyObject* callable_object, PyObject* args);
 
@@ -1083,6 +1092,36 @@ PyObject* LoadEmbededModule(PyObject* self, PyObject* arg)
 
     return module_object;
 }
+
+
+PyObject* FetchEmbeddedFunctionAddress(PyObject* self, PyObject* arg)
+{
+    auto size = PyUnicode_GetLength(arg);
+    auto buffer = PyUnicode_AsUCS4Copy(arg);
+
+#ifdef _MSC_VER
+    std::wstring_convert< std::codecvt_utf8<int32_t>, int32_t > conv;
+    auto name = conv.to_bytes(\
+        reinterpret_cast<const int32_t*>(std::u32string(buffer, size).c_str()));
+#else
+    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
+    auto name = conv.to_bytes(std::u32string(buffer, size));
+#endif // _MSC_VER
+
+    PyMem_Free(buffer);
+
+    const auto& functions = EmbededFunctionNameToFunction();
+
+    auto itr = functions.find(name);
+    if(itr == functions.end()){
+        printf("FetchEmbeddedFunctionAddress Try Fetch None Exists Function %s\n", name.c_str());
+        return OBJECT_NONE;
+    }
+
+    // return OBJECT_NONE;
+    return PyLong_FromVoidPtr(itr->second);
+}
+
 
 }// end namespace
 
@@ -1216,6 +1255,8 @@ bool Python::Initialize(int argc, char* argv[])
         X_LOAD_PY_FUN_PTR(PyObject_CallObject);
         X_LOAD_PY_FUN_PTR(PyObject_Print);
 
+        X_LOAD_PY_FUN_PTR(PyLong_FromVoidPtr);
+
         X_LOAD_PY_FUN_PTR(PyTuple_New);
         X_LOAD_PY_FUN_PTR(PyTuple_SetItem);
 
@@ -1307,12 +1348,18 @@ bool Python::Initialize(int argc, char* argv[])
         PyDict_SetItemString(dict, "__executable_located_folder__", exe_dir_str);
     #endif// XBUS_LITE_PLATFORM_WINDOWS
 
-        static PyMethodDef methods_list[2];
+        // static PyMethodDef methods_list[2];
+        static PyMethodDef methods_list[3];
 
         methods_list[0].ml_name  = "__load_embeded_module__";
         methods_list[0].ml_meth  = LoadEmbededModule;
         methods_list[0].ml_flags = 0x0008; // METH_O
         methods_list[0].ml_doc   = NULL;
+
+        methods_list[1].ml_name  = "__fetch_embedded_function_address__";
+        methods_list[1].ml_meth  = FetchEmbeddedFunctionAddress;
+        methods_list[1].ml_flags = 0x0008; // METH_O
+        methods_list[1].ml_doc   = NULL;
 
         PyModule_AddFunctions(module, methods_list);
     }

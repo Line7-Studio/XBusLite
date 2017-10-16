@@ -20,6 +20,7 @@ endif()
 
 # all unit test
 list(APPEND xbus_unit_test "knock_knock")
+list(APPEND xbus_unit_test "embed_ffi")
 list(APPEND xbus_unit_test "embed_module")
 list(APPEND xbus_unit_test "create_client")
 list(APPEND xbus_unit_test "task_execution")
@@ -30,8 +31,8 @@ foreach(this ${xbus_unit_test})
 
     xbus_add_client(${this} SOURCE test/${this}/${this}.cxx)
 
-    xbus_set_client(${this} EXECUTABLE ${this})
     xbus_set_client(${this} EXECUTABLE_DIR xbus_client_host)
+    xbus_set_client(${this} EXECUTABLE ${this})
 
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test/${this}/${this}.py)
         xbus_set_client(${this} EMBED_PYTHON_SOURCE

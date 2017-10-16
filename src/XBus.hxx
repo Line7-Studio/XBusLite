@@ -99,6 +99,16 @@ private:
  */
 std::map<str_t, client_init_function_t>& ClientNameToInitFunction();
 
+
+/*
+ store the registered `embedded_c_function_name`->`embedded_c_function` here
+ */
+
+typedef void* embedded_c_function_t;
+std::map<str_t, embedded_c_function_t>& EmbededFunctionNameToFunction();
+
+
+
 /*
   create client with `client_name` mapped init function,
   this new client's name the `client_name`
@@ -222,6 +232,13 @@ namespace XBus
     namespace XBUS_UNIQUE{                                                     \
         auto XBUS_NONE_USED_SYMBOL() =                                         \
             ::XBusLite::ClientNameToInitFunction()[(name)] = fun;              \
+    }//namespace XBUS_UNIQUE
+
+
+#define XBUS_REGISTE_EMBEDDED_CTYPE_FUNTION(name, fun)                         \
+    namespace XBUS_UNIQUE{                                                     \
+        auto XBUS_NONE_USED_SYMBOL() =                                         \
+            ::XBusLite::EmbededFunctionNameToFunction()[(name)] = fun;         \
     }//namespace XBUS_UNIQUE
 
 
