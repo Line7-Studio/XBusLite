@@ -113,6 +113,7 @@ endfunction()
 
 # export function for public use
 function(xbus_add_client xbus_server_name KEYWORD_SRC)
+    # check the host is defined before add client
     if(NOT TARGET ${xbus_server_name})
         message(FATAL_ERROR "must call xbus_set_client_host after a existed target")
     endif()
@@ -123,8 +124,6 @@ function(xbus_add_client xbus_server_name KEYWORD_SRC)
 
     message(STATUS "XBusLite Add Client: ${xbus_server_name}")
 
-    get_target_property(server_is_win32 ${xbus_server_name} WIN32_EXECUTABLE)
-
     # check file exist here
     set(xbus_client_host_source_files ${ARGN})
     foreach(var ${xbus_client_host_source_files})
@@ -133,46 +132,72 @@ function(xbus_add_client xbus_server_name KEYWORD_SRC)
         endif()
     endforeach()
 
-    if(server_is_win32)
-        add_executable(${xbus_server_name}_xbus_client_host WIN32 ${xbus_client_host_source_files})
-    else()
-        add_executable(${xbus_server_name}_xbus_client_host ${xbus_client_host_source_files})
-    endif()
+    add_executable(${xbus_server_name}_xbus_client_host ${xbus_client_host_source_files})
 
-
-    target_sources(${xbus_server_name}_xbus_client_host PRIVATE ${xbus_lite_dir}/src/XBus.cxx)
-    target_sources(${xbus_server_name}_xbus_client_host PRIVATE ${xbus_lite_dir}/src/XBus.hxx)
-
-    target_include_directories(${xbus_server_name}_xbus_client_host PRIVATE ${xbus_lite_dir}/src)
-    target_compile_definitions(${xbus_server_name}_xbus_client_host PRIVATE XBUS_SOURCE_FOR_CLIENT_HOST)
-
+    # basic settings for the host
     target_sources(${xbus_server_name} PRIVATE ${xbus_lite_dir}/src/XBus.cxx)
     target_sources(${xbus_server_name} PRIVATE ${xbus_lite_dir}/src/XBus.hxx)
     target_sources(${xbus_server_name} PRIVATE ${xbus_client_host_source_files})
     target_include_directories(${xbus_server_name} PRIVATE ${xbus_lite_dir}/src)
 
-    get_target_property(server_host_name ${xbus_server_name} RUNTIME_OUTPUT_NAME)
+    # basic settings for the client
+    target_sources(${xbus_server_name}_xbus_client_host PRIVATE ${xbus_lite_dir}/src/XBus.cxx)
+    target_sources(${xbus_server_name}_xbus_client_host PRIVATE ${xbus_lite_dir}/src/XBus.hxx)
+    target_include_directories(${xbus_server_name}_xbus_client_host PRIVATE ${xbus_lite_dir}/src)
+    target_compile_definitions(${xbus_server_name}_xbus_client_host PRIVATE XBUS_SOURCE_FOR_CLIENT_HOST)
+
+    # make sure the client executeable file exist relative to the host
+    get_target_property(server_host_name ${xbus_server_name} OUTPUT_NAME)
     get_target_property(server_host_dir ${xbus_server_name} RUNTIME_OUTPUT_DIRECTORY)
 
-    if(CMAKE_SYSTEM_NAME STREQUAL Linux)
-        target_link_libraries(${xbus_server_name}
-                        ${librt} ${libdl} ${libpthread})
-        target_link_libraries(${xbus_server_name}_xbus_client_host
-                        ${librt} ${libdl} ${libpthread})
+    # by default cmake will not set this property,
+    # but the default value is the same as ${xbus_server_name}
+    if(NOT server_host_name)
+        set(server_host_name ${xbus_server_name})
     endif()
 
-    if(NOT server_host_dir)
-        return()
-    endif()
+    # by default, we make the client's file name like ${host-name}-xbus-client
+    set_target_properties(${xbus_server_name}_xbus_client_host PROPERTIES
+                                RUNTIME_OUTPUT_NAME ${server_host_name}-xbus-client)
 
     # this is the default dir, eg. same as the server
-    set_target_properties(${xbus_server_name}_xbus_client_host PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY ${server_host_dir})
-
-    get_property(is_macos_bundle TARGET ${xbus_server_name} PROPERTY MACOSX_BUNDLE)
-    if(${is_macos_bundle})
+    if(server_host_dir) # well, some one set the host output dir already
+        # by default, we make the client exist with the host directory
         set_target_properties(${xbus_server_name}_xbus_client_host PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY ${server_host_dir}/${xbus_server_name}.app/Contents/MacOS)
+                                    RUNTIME_OUTPUT_DIRECTORY ${server_host_dir})
+    else()
+        # ??
+    endif()
+
+
+    if(CMAKE_SYSTEM_NAME STREQUAL Windows)
+        # Build an executable with a WinMain entry point on windows.
+        get_target_property(server_is_gui_build ${xbus_server_name} WIN32_EXECUTABLE)
+        if(server_is_gui_build)
+            set_target_properties(${xbus_server_name}_xbus_client_host PROPERTIES
+                                    WIN32_EXECUTABLE ${server_is_gui_build})
+        endif()
+    endif()
+
+    if(CMAKE_SYSTEM_NAME STREQUAL Linux)
+        target_link_libraries(${xbus_server_name} ${librt} ${libdl} ${libpthread})
+        target_link_libraries(${xbus_server_name}_xbus_client_host ${librt} ${libdl} ${libpthread})
+    endif()
+
+    if(CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
+         # TODO: ???
+    endif()
+
+    if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
+        get_target_property(is_macos_bundle ${xbus_server_name} MACOSX_BUNDLE)
+        if(NOT server_host_dir)
+            message(FATAL_ERROR "Fucked by CMake?? need find server_host_dir first!")
+        endif()
+
+        if(${is_macos_bundle})
+            set_target_properties(${xbus_server_name}_xbus_client_host PROPERTIES
+                RUNTIME_OUTPUT_DIRECTORY ${server_host_dir}/${xbus_server_name}.app/Contents/MacOS)
+        endif()
     endif()
 
 endfunction()
@@ -182,6 +207,41 @@ endfunction()
 function(xbus_set_client xbus_server_name ARG_TYPE)
 
     if(${ARG_TYPE} STREQUAL "EXECUTABLE")
+        get_target_property(var ${xbus_server_name} OUTPUT_NAME)
+
+        if(NOT var)
+            set(the_xbus_server_executable_name ${xbus_server_name})
+        else()
+            set(the_xbus_server_executable_name ${var})
+        endif()
+
+        get_target_property(var ${xbus_server_name} RUNTIME_OUTPUT_DIRECTORY)
+
+        if(NOT var)
+            set(the_xbus_server_executable_dir_is_default TRUE)
+        else()
+            set(the_xbus_server_executable_dir_is_default FALSE)
+        endif()
+
+        if(DEFINED ${xbus_server_name}_client_EXECUTABLE_DIR)
+            # we call xbus_set_client(EXECUTABLE_DIR) already
+            # message("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+        else()
+            # message("NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN")
+            if(${the_xbus_server_executable_dir_is_default} STREQUAL TRUE)
+                if(${ARGN} STREQUAL ${the_xbus_server_executable_name})
+                    message(WARNING
+                    "The client is set the same name as the host `${xbus_server_name}`!! \
+                    This will lead the client's executable file overwrite the host file!! \
+                    You should set the client with an other name, \
+                    or call `xbus_set_client` EXECUTABLE_DIR to chanage the client's output dir`"
+                    )
+                endif()
+            else()
+                # if not the default dir, we don't give it a fuck
+            endif()
+        endif()
+
         set_target_properties(${xbus_server_name}_xbus_client_host
                                 PROPERTIES RUNTIME_OUTPUT_NAME ${ARGN})
         set(${xbus_server_name}_client_EXECUTABLE_NAME ${ARGN} PARENT_SCOPE)
@@ -189,12 +249,25 @@ function(xbus_set_client xbus_server_name ARG_TYPE)
 
 
     if(${ARG_TYPE} STREQUAL "EXECUTABLE_DIR")
-        get_target_property(server_host_dir ${xbus_server_name}_xbus_client_host
-                                RUNTIME_OUTPUT_DIRECTORY)
-        # TODO ?? add check ??
-        set_target_properties(${xbus_server_name}_xbus_client_host
-                                PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${server_host_dir}/${ARGN})
-        set(${xbus_server_name}_client_EXECUTABLE_DIR ${server_host_dir}/${ARGN} PARENT_SCOPE)
+        get_target_property(var ${xbus_server_name} RUNTIME_OUTPUT_DIRECTORY)
+
+        if(NOT var)
+            set(the_xbus_server_executable_dir_is_default TRUE)
+        else()
+            set(the_xbus_server_executable_dir_is_default FALSE)
+            set(server_host_dir ${var})
+        endif()
+
+        if(${the_xbus_server_executable_dir_is_default} STREQUAL TRUE)
+            set_target_properties(${xbus_server_name}_xbus_client_host
+                    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ARGN})
+            set(${xbus_server_name}_client_EXECUTABLE_DIR ${ARGN} PARENT_SCOPE)
+        else()
+            set_target_properties(${xbus_server_name}_xbus_client_host
+                    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${server_host_dir}/${ARGN})
+            set(${xbus_server_name}_client_EXECUTABLE_DIR ${server_host_dir}/${ARGN} PARENT_SCOPE)
+        endif()
+
     endif()
 
 
