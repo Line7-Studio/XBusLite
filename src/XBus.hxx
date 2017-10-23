@@ -238,7 +238,7 @@ namespace XBus
 #define XBUS_REGISTE_EMBEDDED_CTYPE_FUNTION(name, fun)                         \
     namespace XBUS_UNIQUE{                                                     \
         auto XBUS_NONE_USED_SYMBOL() =                                         \
-            ::XBusLite::EmbededFunctionNameToFunction()[(name)] = fun;         \
+            ::XBusLite::EmbededFunctionNameToFunction()[(name)] = (void*)fun;  \
     }//namespace XBUS_UNIQUE
 
 
