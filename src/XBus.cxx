@@ -1314,8 +1314,10 @@ bool Python::Initialize(int argc, char* argv[])
                              + python_dll_dir + L"\\DLLs;";
 
         PyLy->Load<void(*)(const wchar_t*)>("Py_SetPath")(python_lib_path.c_str());
+
     #else // NOT XBUS_LITE_PLATFORM_WINDOWS
 
+        // fix python lib path for *nix
         auto python_bin_path = check_and_formal_file_path(PythonRuntimeFilePath());
         auto python_bin_dir = get_file_located_dir(python_bin_path);
         auto python_lib_dir = check_and_formal_file_path(python_bin_dir+"/../lib");
@@ -1326,8 +1328,6 @@ bool Python::Initialize(int argc, char* argv[])
          + python_lib_dir + "/" + XBUS_PYTHON_LIB_VERSION_PREFIX + "/lib-dynload:"
          + python_lib_dir + "/" + XBUS_PYTHON_LIB_VERSION_PREFIX + "/site-packages:"
          + "";
-
-        printf("fffffffffff %s\n", python_lib_path.c_str());
 
         std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
         PyLy->Load<void(*)(const wchar_t*)>("Py_SetPath")( \
@@ -1397,8 +1397,6 @@ bool Python::Initialize(int argc, char* argv[])
         Py_IncRef(MODULE_MAIN_DICT);
     }
     } /****************** using namespace PYTHON; ******************/
-
-    PyRun_SimpleString("import sys;print(sys.path);");
 
     return true;
 }
