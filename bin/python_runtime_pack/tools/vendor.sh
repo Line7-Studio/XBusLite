@@ -1,7 +1,7 @@
 #! /usr/bin/env bash
 
 if [[ $from_main != yes ]]; then
-    echo "Your should run this script from main"
+    echo -e "\033[31mYour should run this script from main \033[0m"
     exit 0
 fi
 

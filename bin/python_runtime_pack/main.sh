@@ -41,11 +41,11 @@ export py_3rd_packages=("${var[@]}")
 
 print_help_doc()
 {
-    echo " 1:  build     [build the python from                  ]"
-    echo " 2:  clean     [build the python from                  ]"
-    echo " 3:  tense     [pack all python runtime                ]"
-    echo " 4:  copy_to   [pack all python runtime                ]"
-    echo " 5:  help      [print help document                    ]"
+    echo -e " 1: build  :\033[32m build python $required_python_version \033[0m"
+    echo -e " 2: clean  :\033[32m remove all used tmp files             \033[0m"
+    echo -e " 3: tense  :\033[32m pack and zip built python runtime     \033[0m"
+    echo -e " 4: vendor :\033[32m copy built python runtime to somewhere\033[0m"
+    echo -e " 5: help   :\033[32m print help document                   \033[0m"
     exit 0
 }
 
