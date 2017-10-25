@@ -37,6 +37,9 @@ function check_compiler_tools()
     if [ "$os_name" = "Windows" ]; then
         hash cl &> /dev/null
         if [ $? -eq 0 ] ; then
+            if [[ `cl 2>&1` =~ .*x64.* ]]; then
+                export for_64bit=true
+            fi
             have_cxx=true
             # tell cmake select msvc toolset
             export cc=cl
@@ -100,6 +103,19 @@ build_xbus()
     else
         cmake_args="$cmake_args -DCMAKE_BUILD_TYPE=Debug"
     fi
+
+    if [ "$os_name" = "Windows" ]; then
+        if [[ $for_64bit ]]; then
+            python_executable=bin/python_runtime_pack/dist/$os_name/x64/python.exe
+        else
+            python_executable=bin/python_runtime_pack/dist/$os_name/x32/python.exe
+        fi
+        cmake_args="$cmake_args -DXBUS_PYTHON_EXECUTABLE=$python_executable"
+    else
+        python_executable=bin/python_runtime_pack/dist/$os_name/bin/python3
+        cmake_args="$cmake_args -DXBUS_PYTHON_EXECUTABLE=$python_executable"
+    fi
+
 
     mkdir -p $build_dir
     pushd $build_dir >/dev/null

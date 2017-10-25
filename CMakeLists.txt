@@ -10,11 +10,8 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 add_subdirectory(3rd/googletest)
 
 ################################################################################
-if(CMAKE_SYSTEM_NAME STREQUAL Windows)
-
-else()
-    set(xbus_python_executable ${CMAKE_CURRENT_SOURCE_DIR}/bin/python_runtime/bin/python3)
-endif()
+set(xbus_python_executable ${CMAKE_CURRENT_SOURCE_DIR}/${XBUS_PYTHON_EXECUTABLE})
+message(STATUS "XBus Python ${xbus_python_executable}")
 
 include(XBusLite.cmake)
 
