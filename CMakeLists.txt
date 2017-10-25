@@ -22,6 +22,11 @@ list(APPEND xbus_unit_test "embed_module")
 list(APPEND xbus_unit_test "create_client")
 list(APPEND xbus_unit_test "task_execution")
 
+# file(TO_NATIVE_PATH ${xbus_python_executable} fixed_xbus_python_executable_path)
+# add_definitions(-DXBUS_PYTHON_EXECUTABLE="${fixed_xbus_python_executable_path}")
+
+add_definitions(-DXBUS_PYTHON_EXECUTABLE=${xbus_python_executable})
+
 foreach(this ${xbus_unit_test})
 
     add_executable(${this} test/${this}.cxx)

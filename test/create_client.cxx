@@ -72,18 +72,11 @@ int main(int argc, char *argv[])
 #endif // XBUS_LITE_PLATFORM_WINDOWS
 
 #ifdef XBUS_LITE_PLATFORM_WINDOWS
-    XBus::PythonRuntimeFilePath() = L"E:\\Python\\3.6\\x64\\python36.dll";
+    auto exe = std::wstring(XBUS_NATIVE_STRINGIFY_MACRO(XBUS_PYTHON_EXECUTABLE));
+    XBus::PythonRuntimeFilePath() = (exe + L"/../python36.dll");
+#else
+    XBus::PythonRuntimeFilePath() = XBUS_NATIVE_STRINGIFY_MACRO(XBUS_PYTHON_EXECUTABLE);
 #endif // XBUS_LITE_PLATFORM_WINDOWS
-
-#ifdef XBUS_LITE_PLATFORM_DARWIN
-    // XBus::PythonRuntimeFilePath() = "/usr/local/Cellar/python3/3.6.3/Frameworks/Python.framework/Versions/3.6/Python";
-    // XBus::PythonRuntimeFilePath() = "/Users/joseph/Projects/xLIBS/_dst/tmp/macOS/Runtimes/Python/bin/python3";
-    XBus::PythonRuntimeFilePath() = "/Users/joseph/Projects/xLIBS/3rd/XBusLite/bin/python_runtime/bin/python3";
-#endif // XBUS_LITE_PLATFORM_DARWIN
-
-#ifdef XBUS_LITE_PLATFORM_LINUX
-    XBus::PythonRuntimeFilePath() = "/mnt/sshfs/3rd/XBusLite/bin/python_runtime_pack/dist/Linux/bin/python3";
-#endif // XBUS_LITE_PLATFORM_LINUX
 
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

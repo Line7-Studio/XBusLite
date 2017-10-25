@@ -227,6 +227,13 @@ namespace XBus
 #define XBUS_COMBINE(X,Y,Z) XBUS_COMBINE_XYZ(X,Y,Z)
 #define XBUS_NONE_USED_SYMBOL() XBUS_COMBINE(_,__LINE__,__COUNTER__)
 
+#define XBUS_NATIVE_STRINGIFY_MACRO(a) XBUS_NATIVE_STRINGIFY_STR(a)
+
+#ifdef XBUS_LITE_PLATFORM_WINDOWS
+    #define XBUS_NATIVE_STRINGIFY_STR(a) L#a
+#else
+    #define XBUS_NATIVE_STRINGIFY_STR(a) #a
+#endif // XBUS_LITE_PLATFORM_WINDOWS
 
 #define XBUS_REGISTE_CLIENT(name, fun)                                         \
     namespace XBUS_UNIQUE{                                                     \

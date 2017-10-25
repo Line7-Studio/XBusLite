@@ -28,12 +28,11 @@ int main(int argc, char *argv[])
 #endif // XBUS_LITE_PLATFORM_WINDOWS
 
 #ifdef XBUS_LITE_PLATFORM_WINDOWS
-    XBus::PythonRuntimeFilePath() = L"E:\\Python\\3.6\\x64\\python36.dll";
+    auto exe = std::wstring(XBUS_NATIVE_STRINGIFY_MACRO(XBUS_PYTHON_EXECUTABLE));
+    XBus::PythonRuntimeFilePath() = (exe + L"/../python36.dll");
+#else
+    XBus::PythonRuntimeFilePath() = XBUS_NATIVE_STRINGIFY_MACRO(XBUS_PYTHON_EXECUTABLE);
 #endif // XBUS_LITE_PLATFORM_WINDOWS
-
-#ifdef XBUS_LITE_PLATFORM_DARWIN
-    XBus::PythonRuntimeFilePath() = "/usr/local/Cellar/python3/3.6.3/Frameworks/Python.framework/Versions/3.6/Python";
-#endif // XBUS_LITE_PLATFORM_DARWIN
 
     ::testing::InitGoogleTest(&argc, argv);
 
