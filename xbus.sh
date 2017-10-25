@@ -88,8 +88,7 @@ print_help_doc()
 
 init_xbus()
 {
-    git submodule init
-    git submodule update
+    bin/python_runtime_pack/main.sh build
 }
 
 build_xbus()

@@ -10,13 +10,13 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 add_subdirectory(3rd/googletest)
 
 ################################################################################
-include(XBusLite.cmake)
-
 if(CMAKE_SYSTEM_NAME STREQUAL Windows)
-    set(xbus_python_executable E:/Python/3.6/x64/python)
+
 else()
-    set(xbus_python_executable python3)
+    set(xbus_python_executable ${CMAKE_CURRENT_SOURCE_DIR}/bin/python_runtime/bin/python3)
 endif()
+
+include(XBusLite.cmake)
 
 # all unit test
 list(APPEND xbus_unit_test "knock_knock")
@@ -28,14 +28,17 @@ list(APPEND xbus_unit_test "task_execution")
 foreach(this ${xbus_unit_test})
 
     add_executable(${this} test/${this}.cxx)
+    target_sources(${this} PRIVATE test/${this}/${this}.cxx)
+    xbus_set(${this} SERVER)
 
-    xbus_add_client(${this} SOURCE test/${this}/${this}.cxx)
+    add_executable(${this}_client test/${this}/${this}.cxx)
+    xbus_set(${this}_client CLIENT)
 
-    xbus_set_client(${this} EXECUTABLE_DIR xbus_client_host)
-    xbus_set_client(${this} EXECUTABLE ${this})
+    set_target_properties(${this}_client PROPERTIES RUNTIME_OUTPUT_DIRECTORY xbus_client_host)
+    set_target_properties(${this}_client PROPERTIES RUNTIME_OUTPUT_NAME ${this})
 
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test/${this}/${this}.py)
-        xbus_set_client(${this} EMBED_PYTHON_SOURCE
+        xbus_embed_source_code(${this}_client
                         FILE ${CMAKE_CURRENT_SOURCE_DIR}/test/${this}/${this}.py
                         URL ":EmbededSource")
     endif()

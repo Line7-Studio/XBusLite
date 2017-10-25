@@ -76,9 +76,17 @@ int main(int argc, char *argv[])
 #endif // XBUS_LITE_PLATFORM_WINDOWS
 
 #ifdef XBUS_LITE_PLATFORM_DARWIN
-    XBus::PythonRuntimeFilePath() = "/usr/local/Cellar/python3/3.6.3/Frameworks/Python.framework/Versions/3.6/Python";
+    // XBus::PythonRuntimeFilePath() = "/usr/local/Cellar/python3/3.6.3/Frameworks/Python.framework/Versions/3.6/Python";
+    // XBus::PythonRuntimeFilePath() = "/Users/joseph/Projects/xLIBS/_dst/tmp/macOS/Runtimes/Python/bin/python3";
+    XBus::PythonRuntimeFilePath() = "/Users/joseph/Projects/xLIBS/3rd/XBusLite/bin/python_runtime/bin/python3";
 #endif // XBUS_LITE_PLATFORM_DARWIN
+
+#ifdef XBUS_LITE_PLATFORM_LINUX
+    XBus::PythonRuntimeFilePath() = "/mnt/sshfs/3rd/XBusLite/bin/python_runtime_pack/dist/Linux/bin/python3";
+#endif // XBUS_LITE_PLATFORM_LINUX
 
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
+
+

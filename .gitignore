@@ -2,6 +2,11 @@
 # exclude build cache dir
 tmp/
 
+# exclude build python runtime dir
+bin/python_runtime/
+bin/python_runtime_pack/build/
+bin/python_runtime_pack/dist/
+
 # macOS
 .DS_Store
 

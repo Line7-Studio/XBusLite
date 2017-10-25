@@ -44,6 +44,7 @@
 #endif //XBUS_LITE_PLATFORM_LINUX
 
 #ifdef XBUS_LITE_PLATFORM_DARWIN
+    #include <sys/syslimits.h> // for PATH_MAX
     #include <sys/types.h> // for kqueue
     #include <sys/event.h> // for kqueue
     #include <sys/time.h>  // for kqueue
@@ -246,6 +247,14 @@ file_path_t get_this_executable_file_full_path()
 
     result = file_path_t(app_full_path);
 #endif //XBUS_LITE_PLATFORM_WINDOWS
+
+#ifdef XBUS_LITE_PLATFORM_LINUX
+    char buffer[PATH_MAX+1];
+    if( ::readlink("/proc/self/exe", buffer, sizeof(buffer) - 1) == -1 ) {
+      throw std::string("::readlink(/proc/self/exe) failed");
+    }
+    result = file_path_t(buffer);
+#endif //XBUS_LITE_PLATFORM_LINUX
 
     return result;
 }
@@ -807,7 +816,7 @@ void CreateClient(const str_t& client_name, \
 
     auto client_host_executable = get_this_executable_located_dir() \
                                             + "/" + ClientHostFilePath();
-
+    // printf(">>>>>>>>>>> %s\n", client_host_executable.c_str());
     auto args_shared_mem = str_t("--shared_mem=") + shared_mem->name();
 
     char* spawned_args[3] = {0};
@@ -1305,6 +1314,25 @@ bool Python::Initialize(int argc, char* argv[])
                              + python_dll_dir + L"\\DLLs;";
 
         PyLy->Load<void(*)(const wchar_t*)>("Py_SetPath")(python_lib_path.c_str());
+    #else // NOT XBUS_LITE_PLATFORM_WINDOWS
+
+        auto python_bin_path = check_and_formal_file_path(PythonRuntimeFilePath());
+        auto python_bin_dir = get_file_located_dir(python_bin_path);
+        auto python_lib_dir = check_and_formal_file_path(python_bin_dir+"/../lib");
+
+        auto python_lib_path =
+           python_lib_dir + "/" + XBUS_PYTHON_ZIP_PACKAGE_NAME + ":"
+         + python_lib_dir + "/" + XBUS_PYTHON_LIB_VERSION_PREFIX + ":"
+         + python_lib_dir + "/" + XBUS_PYTHON_LIB_VERSION_PREFIX + "/lib-dynload:"
+         + python_lib_dir + "/" + XBUS_PYTHON_LIB_VERSION_PREFIX + "/site-packages:"
+         + "";
+
+        printf("fffffffffff %s\n", python_lib_path.c_str());
+
+        std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
+        PyLy->Load<void(*)(const wchar_t*)>("Py_SetPath")( \
+                        convert.from_bytes(python_lib_path).c_str());
+
     #endif // XBUS_LITE_PLATFORM_WINDOWS
 
     #ifdef XBUS_LITE_PLATFORM_WINDOWS
@@ -1369,6 +1397,8 @@ bool Python::Initialize(int argc, char* argv[])
         Py_IncRef(MODULE_MAIN_DICT);
     }
     } /****************** using namespace PYTHON; ******************/
+
+    PyRun_SimpleString("import sys;print(sys.path);");
 
     return true;
 }
