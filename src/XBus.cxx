@@ -169,8 +169,8 @@ file_path_t check_and_formal_file_path(const file_path_t& file_path)
 
     if(fixed_file_path_ptr == nullptr)
     {
-        printf("%s realpath error: %s\n", __FUNCTION__, ::strerror(errno));
-        throw std::runtime_error("::realpath failed");
+        printf("%s ::realpath error: %s\n", __FUNCTION__, ::strerror(errno));
+        throw std::runtime_error(str_t(__FUNCTION__)+" ::realpath failed");
     }
     // TODO: need formal??
     return file_path_t(fixed_file_path_ptr);
@@ -353,18 +353,18 @@ public:
 
         m_handle = ::shm_open(m_name.data(), O_CREAT|O_RDWR, S_IRUSR|S_IWUSR);
         if( m_handle == -1 ){
-            throw std::runtime_error(str_t(__FUNCTION__) + " ::shm_open failed");
+            throw std::runtime_error(str_t(__FUNCTION__)+" ::shm_open failed");
         }
 
         if( ::ftruncate(m_handle, required_size) != 0 ){
-            throw std::runtime_error(str_t(__FUNCTION__) + " ::ftruncate failed");
+            throw std::runtime_error(str_t(__FUNCTION__)+" ::ftruncate failed");
         }
 
         m_buffer = (char*)::mmap(0, required_size, PROT_READ|PROT_WRITE, \
                                                  MAP_SHARED, m_handle, 0);
 
         if( m_buffer == MAP_FAILED ){
-            throw std::runtime_error(str_t(__FUNCTION__) + " ::mmap failed");
+            throw std::runtime_error(str_t(__FUNCTION__)+" ::mmap failed");
         }
 
         // store the size info
@@ -376,10 +376,10 @@ public:
         auto required_size = *((size_t*)m_buffer);
 
         if( ::munmap(m_buffer, required_size) ){
-            throw std::runtime_error(str_t(__FUNCTION__) + " ::munmap failed");
+            throw std::runtime_error(str_t(__FUNCTION__)+" ::munmap failed");
         }
         if( ::shm_unlink(m_name.c_str()) != 0 ){
-            throw std::runtime_error(str_t(__FUNCTION__) + " ::shm_unlink failed");
+            throw std::runtime_error(str_t(__FUNCTION__)+" ::shm_unlink failed");
         }
     }
 #endif // XBUS_LITE_PLATFORM_WINDOWS
@@ -417,7 +417,7 @@ public:
         m_handle = ::shm_open(name.c_str(), O_CREAT|O_RDWR, S_IRUSR|S_IWUSR);
 
         if( m_handle == -1 ){
-            throw std::runtime_error(str_t(__FUNCTION__) + " ::shm_open failed");
+            throw std::runtime_error(str_t(__FUNCTION__)+" ::shm_open failed");
         }
 
         auto buffer = (char*)::mmap(NULL, sizeof(size_t), PROT_READ|PROT_WRITE, \
@@ -429,7 +429,7 @@ public:
                                                  MAP_SHARED, m_handle, 0);
 
         if( m_buffer == MAP_FAILED ){
-            throw std::runtime_error(str_t(__FUNCTION__) + " ::mmap failed");
+            throw std::runtime_error(str_t(__FUNCTION__)+" ::mmap failed");
        }
     }
 public:
@@ -757,7 +757,7 @@ void CreateClient(const str_t& client_name, \
     printf("%s %s\n", __FILE__, __FUNCTION__);
 
     if( ClientNameToInitFunction()[client_name] == nullptr ){
-        printf("not registered client name\n");
+        printf("CreateClient Try to Create None Registered Client %s\n", client_name.c_str());
         throw Error::NoneRegisteredClient(client_name);
     }
 
@@ -796,7 +796,7 @@ void CreateClient(const str_t& client_name, \
                                     &startupInfo, &prcInfo );
 
     if( success == 0 ){
-        printf("CreateProcess Failed %lu\n", ::GetLastError());
+        printf("::CreateProcess Failed %lu\n", ::GetLastError());
         throw std::runtime_error(__FUNCTION__" ::CreateProcess Failed");
     }
 
@@ -804,7 +804,7 @@ void CreateClient(const str_t& client_name, \
 
     if( 0 == ::AssignProcessToJobObject(JOB_SESSION_OBJECT, process_handle) )
     {
-        printf("AssignProcessToJobObject Failed %lu\n", ::GetLastError());
+        printf("::AssignProcessToJobObject Failed %lu\n", ::GetLastError());
         throw std::runtime_error(__FUNCTION__" ::AssignProcessToJobObject Failed");
     }
 
@@ -816,7 +816,7 @@ void CreateClient(const str_t& client_name, \
 
     auto client_host_executable = get_this_executable_located_dir() \
                                             + "/" + ClientHostFilePath();
-    // printf(">>>>>>>>>>> %s\n", client_host_executable.c_str());
+
     auto args_shared_mem = str_t("--shared_mem=") + shared_mem->name();
 
     char* spawned_args[3] = {0};
@@ -855,6 +855,7 @@ void CreateClient(const str_t& client_name, \
     posix_spawn_file_actions_destroy(&file_actions);
 
     if( success != 0 ){
+        printf("%s ::posix_spawn failed\n", __FUNCTION__);
         throw std::runtime_error(str_t(__FUNCTION__)+" ::posix_spawn failed");
     }
 
@@ -889,6 +890,7 @@ bool IsClientInitialized(const str_t& client_name)
             return true;
         break;
         case ClientInitState::FAILED:
+            // TODO: should NOT be std::runtime_error
             throw std::runtime_error("Client Init Failed");
         break;
     }
@@ -949,6 +951,7 @@ public:
     :m_handle(::LoadLibrary(library_file_path.c_str()))
     {
         if( m_handle == NULL ){
+            // TODO: should NOT be std::runtime_error
             wprintf(L"load python shared library failed! %s\n", library_file_path.c_str());
             throw std::runtime_error("load python shared library failed!\n");
         }
@@ -965,6 +968,7 @@ public:
     :m_handle(::dlopen(library_file_path.c_str(), RTLD_LAZY))
     {
         if( m_handle == NULL ){
+            // TODO: should NOT be std::runtime_error
             printf("load python shared library failed! %s\n", library_file_path.c_str());
             throw std::runtime_error("load python shared library failed!\n");
         }
@@ -1216,6 +1220,8 @@ bool Python::Eval(const EmbededSourceLoader& source_loader)
         }
     }
     if( source_code_index == SourceCodeItemCount ){
+        // TODO:: should NOT be std::runtime_error
+        printf("Python::Eval Try to Call None Exists Code");
         throw std::runtime_error("Python::Eval Try to Call None Exists Code");
     }
 
@@ -1637,6 +1643,7 @@ void listen_server_request_in_child_thread()
             default:
             {
             #ifdef XBUS_DEVELOP_MODE
+                // TODO: should NOT be std::runtime_error
                 throw std::runtime_error("Listen Server Request Get Unknown Type");
             #endif// XBUS_DEVELOP_MODE
             }

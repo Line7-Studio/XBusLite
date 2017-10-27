@@ -77,21 +77,24 @@ function check_compiler_tools()
 }
 check_compiler_tools
 
+pushd `dirname $0` > /dev/null
+this_script_located_dir=`pwd`
+
 ################################################################################
 print_help_doc()
 {
-    echo " 0:  init      [generate xbus project depend files     ]"
-    echo " 1:  build     [build the application                  ]"
-    echo " 2:  clean     [clean generated files                  ]"
-    echo " 3:  test      [run all unit tests                     ]"
-    echo " 4:  pack      [pack xbus framework                    ]"
-    echo " 5:  help      [print help document                    ]"
+    echo " 0: init    [init xbus project need python runtime  ]"
+    echo " 2: clean   [delete all generated files             ]"
+    echo " 1: build   [build the application                  ]"
+    echo " 3: test    [run xbus unit tests                    ]"
+    echo " 4: pack    [pack xbus framework                    ]"
+    echo " 5: help    [print help document                    ]"
     exit 0
 }
 
 init_xbus()
 {
-    bin/python_runtime_pack/main.sh build
+    ${this_script_located_dir}/bin/python_runtime_pack/main.sh build
 }
 
 build_xbus()
@@ -116,7 +119,6 @@ build_xbus()
         cmake_args="$cmake_args -DXBUS_PYTHON_EXECUTABLE=$python_executable"
     fi
 
-
     mkdir -p $build_dir
     pushd $build_dir >/dev/null
 
@@ -140,18 +142,16 @@ test_xbus()
     popd > /dev/null
 }
 
-## TODO: ???
 pack_xbus()
 {
-    pushd $build_dir >/dev/null
-    popd > /dev/null
+    # ${this_script_located_dir}/bin/python_runtime_pack/main.sh tense $2
+    ${this_script_located_dir}/bin/python_runtime_pack/main.sh redist $1
 }
 
 ################################################################################
 # main function
 build_start_time=`$current_date`
-
-case $@ in
+case $1 in
     init)
         init_xbus
     ;;
@@ -165,13 +165,17 @@ case $@ in
         test_xbus
     ;;
     pack)
-        pack_xbus
+        if [[ "$2" == "" ]]; then
+            echo "\`xbus.sh pack\` need specify a dist folder"
+            exit -1
+        fi
+        pack_xbus $2 $3
     ;;
     help)
         print_help_doc
     ;;
     *)
-        echo "bad command! valid command are:"
+        echo "bad command \`$1\`, valid command are:"
         print_help_doc
         exit -1
     ;;

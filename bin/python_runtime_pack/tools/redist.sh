@@ -5,6 +5,7 @@ if [[ $from_main != yes ]]; then
     exit 0
 fi
 
+# the dist dir is argv[1]
 dist=$1
 
 if [[ ! -d $dist ]]; then
@@ -13,25 +14,12 @@ if [[ ! -d $dist ]]; then
     exit -1
 fi
 
-if [[ $os_name == Windows ]]; then
-    if [[ $for_64bit ]]; then
-        python_dir=$root_dir/dist/$os_name/x64
-    else
-        python_dir=$root_dir/dist/$os_name/x32
-    fi
-    python_exe=$python_dir/python.exe
-else
-    python_dir=$root_dir/dist/$os_name
-    python_exe=$python_dir/bin/python3
-fi
-
-$python_exe --version
-
+# check python
+$python_exe --version > /dev/null
 if [[ $? != 0 ]]; then
-    echo "Your should have a workable python $python_exe"
+    echo -e "\033[31mYour should have a workable python $python_exe \033[0m"
     exit -1
 fi
-
 
 
 if [[ $os_name == Windows ]]; then

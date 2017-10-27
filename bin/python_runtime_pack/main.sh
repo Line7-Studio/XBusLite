@@ -1,7 +1,6 @@
 #! /usr/bin/env bash
 
 required_python_version=3.6.3
-required_python_3rd_packages="PyYAML;NumPy;"
 
 case `uname` in
     Linux)
@@ -36,15 +35,13 @@ export py_version_full="${var[0]}.${var[1]}.${var[2]}"
 export py_version_short="${var[0]}.${var[1]}"
 export py_version_nodot="${var[0]}${var[1]}"
 
-var=($(echo $required_python_3rd_packages | tr ';' '\n'))
-export py_3rd_packages=("${var[@]}")
 
 print_help_doc()
 {
     echo -e " 1: build  :\033[32m build python $required_python_version \033[0m"
     echo -e " 2: clean  :\033[32m remove all used tmp files             \033[0m"
     echo -e " 3: tense  :\033[32m pack and zip built python runtime     \033[0m"
-    echo -e " 4: vendor :\033[32m copy built python runtime to somewhere\033[0m"
+    echo -e " 4: redist :\033[32m copy built python runtime to somewhere\033[0m"
     echo -e " 5: help   :\033[32m print help document                   \033[0m"
     exit 0
 }
@@ -55,15 +52,29 @@ pushd $root_dir > /dev/null
 export root_dir=`pwd`
 export from_main=yes
 
+# locate which python
+if [[ $os_name == Windows ]]; then
+    if [[ $for_64bit ]]; then
+        export python_dir=$root_dir/dist/$os_name/x64
+    else
+        export python_dir=$root_dir/dist/$os_name/x32
+    fi
+    export python_exe=$python_dir/python.exe
+else
+    export python_dir=$root_dir/dist/$os_name
+    export python_exe=$python_dir/bin/python3
+fi
+
+# dispatch as argv[1]
 case $1 in
     build)
         ./tools/build.sh
     ;;
     tense)
-        ./tools/tense.sh
+        ./tools/tense.sh $2
     ;;
-    vendor)
-        ./tools/vendor.sh $2
+    redist)
+        ./tools/redist.sh $2
     ;;
     clean)
         rm -rf build/

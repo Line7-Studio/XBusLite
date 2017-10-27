@@ -5,16 +5,15 @@ if [[ $from_main != yes ]]; then
     exit 0
 fi
 
+# the python packages is argv[1]
+var=($(echo $1 | tr ';' '\n'))
+py_3rd_packages=("${var[@]}")
 
-# locate which python
-if [[ $os_name == Windows ]]; then
-    if [[ $for_64bit ]]; then
-        python_exe=$root_dir/dist/$os_name/x64/python.exe
-    else
-        python_exe=$root_dir/dist/$os_name/x32/python.exe
-    fi
-else
-    python_exe=$root_dir/dist/$os_name/bin/python3
+# check python
+$python_exe --version > /dev/null
+if [[ $? != 0 ]]; then
+    echo -e "\033[31mYour should have a workable python $python_exe \033[0m"
+    exit -1
 fi
 
 function create_zip_package()
@@ -104,22 +103,18 @@ END
 
 
 # install pip and setuptools
-$python_exe --version
-# $python_exe -m ensurepip > /dev/null
-# $python_exe -m pip install -U pip > /dev/null
-# $python_exe -m pip install -U setuptools > /dev/null
-# $python_exe -m pip list --format=columns > /dev/null
+$python_exe -m ensurepip > /dev/null
+$python_exe -m pip install -U pip > /dev/null
+$python_exe -m pip install -U setuptools > /dev/null
+$python_exe -m pip list --format=columns > /dev/null
 
 # install required 3rd packages
 for one in "${py_3rd_packages[@]}"; do
-    # $python_exe -m pip install -U $one
-    echo "$one"
+    echo -e "\033[32mInstall python 3rd party module\033[33m $one \033[0m"
+    $python_exe -m pip install -U $one
 done
 
-$python_exe -m pip list --format=columns
-
 # create zip packaged python standard modules
-
 module_location=`$python_exe -c "import os;print(os.__file__);" `
 
 if [[ $os_name == Windows ]]; then
