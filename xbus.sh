@@ -144,7 +144,7 @@ test_xbus()
 
 pack_xbus()
 {
-    # ${this_script_located_dir}/bin/python_runtime_pack/main.sh tense $2
+    ${this_script_located_dir}/bin/python_runtime_pack/main.sh tense $2
     ${this_script_located_dir}/bin/python_runtime_pack/main.sh redist $1
 }
 

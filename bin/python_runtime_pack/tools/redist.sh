@@ -30,19 +30,20 @@ if [[ $os_name == Windows ]]; then
     cp -R $python_dir/DLLs/* $dist/DLLs
 
     mkdir -p $dist/Lib/site-packages
+    cp -R $python_dir/lib/python3.6/site-packages/* $dist/Lib/site-packages
 
 else
     mkdir -p $dist/bin # bin
-
     cp $python_dir/bin/python3 $dist/bin/
 
     mkdir -p $dist/lib # lib
-    mkdir -p $dist/lib/python3.6/lib-dynload
-    mkdir -p $dist/lib/python3.6/site-packages
-
     cp $python_dir/lib/python36.zip $dist/lib/ # zip
 
+    mkdir -p $dist/lib/python3.6/lib-dynload
     cp -R $python_dir/lib/python3.6/lib-dynload/* $dist/lib/python3.6/lib-dynload
+
+    mkdir -p $dist/lib/python3.6/site-packages
+    cp -R $python_dir/lib/python3.6/site-packages/* $dist/lib/python3.6/site-packages
 
 fi
 

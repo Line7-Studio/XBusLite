@@ -101,8 +101,40 @@ END
 
 }
 
+pushd $python_lib_dir/site-packages > /dev/null
+
+find_module_dir=()
+find_module_dir_count=0
+for dir in $python_lib_dir/site-packages/* ; do
+    if [[ ! -d $dir ]]; then
+        continue
+    fi
+    for one in "${py_3rd_packages[@]}"; do
+        var=`echo $dir | grep -i '.*'$one'-.*-info'`
+        if [[ $var != '' ]]; then
+            find_module_dir[$find_module_dir_count]=$var
+            find_module_dir_count=$(($find_module_dir_count+1))
+        fi
+    done
+done
+
+all_module_dir=""
+for one in "${find_module_dir[@]}"; do
+    while read one_line; do
+        all_module_dir="$all_module_dir $one_line"
+    done < $one/top_level.txt
+done
+
+pushd $python_lib_dir/site-packages
+    zip -r $python_dir/3rd.zip $all_module_dir -x "*__pycache__*"
+popd > /dev/null
+
+popd > /dev/null
+
+exit 0
 
 # install pip and setuptools
+echo "install ensurepip"
 $python_exe -m ensurepip > /dev/null
 $python_exe -m pip install -U pip > /dev/null
 $python_exe -m pip install -U setuptools > /dev/null

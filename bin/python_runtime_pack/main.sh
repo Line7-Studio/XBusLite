@@ -60,9 +60,11 @@ if [[ $os_name == Windows ]]; then
         export python_dir=$root_dir/dist/$os_name/x32
     fi
     export python_exe=$python_dir/python.exe
+    export python_lib_dir=$python_dir/Lib
 else
     export python_dir=$root_dir/dist/$os_name
     export python_exe=$python_dir/bin/python3
+    export python_lib_dir=$python_dir/lib/python$py_version_short
 fi
 
 # dispatch as argv[1]
