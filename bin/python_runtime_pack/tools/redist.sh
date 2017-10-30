@@ -23,17 +23,19 @@ fi
 
 
 if [[ $os_name == Windows ]]; then
+    cp $python_dir/python.exe $dist
     cp $python_dir/python??.dll $dist
-    cp $python_dir/python??.exe $dist
 
-    mkdir -p $dist/lib # lib
+    mkdir -p $dist/Lib # lib
     cp $python_dir/lib.zip $dist/python36.zip
 
-    mkdir -p $dist/DLLs
+    mkdir -p $dist/DLLs # Dlls
     cp -R $python_dir/DLLs/* $dist/DLLs
 
-    mkdir -p $dist/Lib/site-packages
-    cp -R $python_dir/lib/python3.6/site-packages/* $dist/Lib/site-packages
+    dist_py_lib_dir=$dist/Lib
+
+    mkdir -p $dist_py_lib_dir/site-packages
+    unzip $python_dir/3rd.zip -d $dist_py_lib_dir/site-packages
 
 else
     mkdir -p $dist/bin # bin
