@@ -27,7 +27,6 @@ pushd build/$os_name/Python-$py_version_full > /dev/null
 
 if [[ $os_name == Windows ]]; then
 
-
     function copy_built_python_to_dist()
     {
         mkdir -p $prefix
@@ -57,7 +56,7 @@ if [[ $os_name == Windows ]]; then
 
     $python_exe --version > /dev/null
     if [[ $? == 0 ]]; then
-        echo "Seems we alreadly have a working x32 python at $python_exe"
+        echo "Seems we alreadly have a working python at $python_exe"
     else
         echo "Build python x32 runtimes ..."
         pushd PCbuild > /dev/null

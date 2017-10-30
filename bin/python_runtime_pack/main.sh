@@ -96,7 +96,7 @@ case $1 in
         print_help_doc
     ;;
     *)
-        echo "bad command! valid command are:"
+        echo "bad command \`$1\`, valid command are:"
         print_help_doc
         exit -1
     ;;

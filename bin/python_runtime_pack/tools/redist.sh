@@ -24,7 +24,10 @@ fi
 
 if [[ $os_name == Windows ]]; then
     cp $python_dir/python??.dll $dist
-    cp $python_dir/python??.zip $dist
+    cp $python_dir/python??.exe $dist
+
+    mkdir -p $dist/lib # lib
+    cp $python_dir/lib.zip $dist/python36.zip
 
     mkdir -p $dist/DLLs
     cp -R $python_dir/DLLs/* $dist/DLLs
@@ -36,14 +39,16 @@ else
     mkdir -p $dist/bin # bin
     cp $python_dir/bin/python3 $dist/bin/
 
+    dist_py_lib_dir=$dist/lib/python$py_version_short
+
     mkdir -p $dist/lib # lib
-    cp $python_dir/lib/python36.zip $dist/lib/ # zip
+    cp $python_dir/lib.zip $dist/lib/python36.zip
 
-    mkdir -p $dist/lib/python3.6/lib-dynload
-    cp -R $python_dir/lib/python3.6/lib-dynload/* $dist/lib/python3.6/lib-dynload
+    mkdir -p $dist_py_lib_dir/lib-dynload
+    cp -R $python_lib_dir/lib-dynload/* $dist_py_lib_dir/lib-dynload
 
-    mkdir -p $dist/lib/python3.6/site-packages
-    cp -R $python_dir/lib/python3.6/site-packages/* $dist/lib/python3.6/site-packages
+    mkdir -p $dist_py_lib_dir/site-packages
+    unzip $python_dir/3rd.zip -d $dist_py_lib_dir/site-packages
 
 fi
 
