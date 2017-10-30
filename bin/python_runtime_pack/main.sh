@@ -35,7 +35,6 @@ export py_version_full="${var[0]}.${var[1]}.${var[2]}"
 export py_version_short="${var[0]}.${var[1]}"
 export py_version_nodot="${var[0]}${var[1]}"
 
-
 print_help_doc()
 {
     echo -e " 1: build  :\033[32m build python $required_python_version \033[0m"
@@ -49,20 +48,30 @@ print_help_doc()
 # jump in script located dir
 root_dir=`dirname $0`
 pushd $root_dir > /dev/null
-export root_dir=`pwd`
-export from_main=yes
+root_dir=`pwd`
 
-# locate which python
+
+# need this on Windows
+if [[ $os_name == Windows ]]; then
+    root_dir=`cygpath -m $root_dir`
+fi
+
+export from_python_runtime_pack_main=yes
+
+# export needed path info
 if [[ $os_name == Windows ]]; then
     if [[ $for_64bit ]]; then
         export python_dir=$root_dir/dist/$os_name/x64
+        export python_runtime_pack_tmp_dir=$root_dir/tmp/$os_name/x64
     else
         export python_dir=$root_dir/dist/$os_name/x32
+        export python_runtime_pack_tmp_dir=$root_dir/tmp/$os_name/x32
     fi
     export python_exe=$python_dir/python.exe
     export python_lib_dir=$python_dir/Lib
 else
     export python_dir=$root_dir/dist/$os_name
+    export python_runtime_pack_tmp_dir=$root_dir/tmp/$os_name
     export python_exe=$python_dir/bin/python3
     export python_lib_dir=$python_dir/lib/python$py_version_short
 fi

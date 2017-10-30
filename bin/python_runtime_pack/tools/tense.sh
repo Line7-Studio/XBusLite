@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-if [[ $from_main != yes ]]; then
+if [[ $from_python_runtime_pack_main != yes ]]; then
     echo -e "\033[31mYour should run this script from main \033[0m"
     exit 0
 fi
@@ -16,7 +16,7 @@ if [[ $? != 0 ]]; then
     exit -1
 fi
 
-function create_zip_package()
+function create_standard_modules_zip_package()
 {
 
 $python_exe <<END
@@ -29,7 +29,7 @@ import zipfile
 
 import py_compile
 
-
+# change this as your needs
 EXCLUDE_FROM_LIBRARY = {
     'site-packages/',
     'pydoc_data/',
@@ -50,17 +50,10 @@ EXCLUDE_FROM_LIBRARY = {
     'test/',
 }
 
-COMPILED_OUT_DIR='tmp/'
-BASE_NAME = 'python{0.major}{0.minor}'.format(sys.version_info)
 
-if sys.platform == 'win32':
-    lib_root_path = pathlib.Path(sys.exec_prefix + '/Lib')
-    zip_package_dir = pathlib.Path(sys.exec_prefix)
-else:
-    version_name = 'python{0.major}.{0.minor}'.format(sys.version_info)
-    lib_root_path = pathlib.Path(sys.exec_prefix + '/lib/'+version_name)
-    zip_package_dir = pathlib.Path(sys.exec_prefix + '/lib')
-
+zip_package_dir = pathlib.Path(os.environ['python_dir'])
+lib_root_path = pathlib.Path(os.environ['python_lib_dir'])
+compiled_out_dir = pathlib.Path(os.environ['python_runtime_pack_tmp_dir'])
 
 exclude_from_library = [lib_root_path.joinpath(x) for x in EXCLUDE_FROM_LIBRARY]
 
@@ -81,8 +74,8 @@ def callback(path):
         return
 
     relative_to = path.relative_to(lib_root_path).with_suffix('.pyc')
-    compiled_file = COMPILED_OUT_DIR + str(relative_to)
-    print(">>>>>>>>>>>>>> ", compiled_file)
+    compiled_file = compiled_out_dir.joinpath(relative_to)
+    print(">>", compiled_file)
     try:
         py_compile.compile(str(path), compiled_file)
     except Exception as e:
@@ -90,17 +83,33 @@ def callback(path):
     else:
         zip_file.write(compiled_file, relative_to)
 
-
-zip_package_file = zip_package_dir.joinpath(BASE_NAME + '.zip')
+zip_package_file = zip_package_dir.joinpath('lib.zip')
 
 with zipfile.ZipFile(zip_package_file, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-    os.makedirs(COMPILED_OUT_DIR, exist_ok=True)
+    os.makedirs(compiled_out_dir, exist_ok=True)
     iterate_path(lib_root_path, callback)
 
 END
 
 }
 
+# install pip and setuptools
+echo "install ensurepip"
+$python_exe -m ensurepip > /dev/null
+$python_exe -m pip install -U pip > /dev/null
+$python_exe -m pip install -U setuptools > /dev/null
+$python_exe -m pip list --format=columns > /dev/null
+
+# install required 3rd packages
+for one in "${py_3rd_packages[@]}"; do
+    echo -e "\033[32mInstall python 3rd party module\033[33m $one \033[0m"
+    $python_exe -m pip install -U $one
+done
+
+# create zip packaged python standard modules
+create_standard_modules_zip_package
+
+# zip required python 3rd module packages
 pushd $python_lib_dir/site-packages > /dev/null
 
 find_module_dir=()
@@ -125,41 +134,14 @@ for one in "${find_module_dir[@]}"; do
     done < $one/top_level.txt
 done
 
-pushd $python_lib_dir/site-packages
-    zip -r $python_dir/3rd.zip $all_module_dir -x "*__pycache__*"
-popd > /dev/null
-
-popd > /dev/null
-
-exit 0
-
-# install pip and setuptools
-echo "install ensurepip"
-$python_exe -m ensurepip > /dev/null
-$python_exe -m pip install -U pip > /dev/null
-$python_exe -m pip install -U setuptools > /dev/null
-$python_exe -m pip list --format=columns > /dev/null
-
-# install required 3rd packages
-for one in "${py_3rd_packages[@]}"; do
-    echo -e "\033[32mInstall python 3rd party module\033[33m $one \033[0m"
-    $python_exe -m pip install -U $one
-done
-
-# create zip packaged python standard modules
-module_location=`$python_exe -c "import os;print(os.__file__);" `
-
-if [[ $os_name == Windows ]]; then
-    echo "$module_location" | grep '^.*python..\.zip\\os\.pyc$' > /dev/null
-else
-    echo "$module_location" | grep '^.*python..\.zip/os\.pyc$' > /dev/null
+if [[ $all_module_dir != "" ]]; then
+    pushd $python_lib_dir/site-packages > /dev/null
+        zip -r $python_dir/3rd.zip $all_module_dir -x "*__pycache__*"
+    popd > /dev/null
 fi
 
-if [[ $? == 0 ]]; then
-    echo "zip packaged standard modules ok"
-else
-    create_zip_package
-fi
+popd > /dev/null
+
 
 case $os_name in
 Linux)

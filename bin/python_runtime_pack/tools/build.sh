@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-if [[ $from_main != yes ]]; then
+if [[ $from_python_runtime_pack_main != yes ]]; then
     echo -e "\033[31mYour should run this script from main \033[0m"
     exit 0
 fi
@@ -27,8 +27,6 @@ pushd build/$os_name/Python-$py_version_full > /dev/null
 
 if [[ $os_name == Windows ]]; then
 
-    dist_x32=$root_dir/dist/$os_name/x32
-    dist_x64=$root_dir/dist/$os_name/x64
 
     function copy_built_python_to_dist()
     {
@@ -57,7 +55,6 @@ if [[ $os_name == Windows ]]; then
         cp -rf ../../Lib/* $prefix/Lib
     }
 
-    python_exe=$dist_x32/python.exe
     $python_exe --version > /dev/null
     if [[ $? == 0 ]]; then
         echo "Seems we alreadly have a working x32 python at $python_exe"
@@ -67,28 +64,23 @@ if [[ $os_name == Windows ]]; then
             cmd //c build.bat -e --no-tkinter
         popd > /dev/null
         pushd PCbuild/win32 > /dev/null
-            prefix=$dist_x32; copy_built_python_to_dist
+            dist_x32=$python_dir/../x32
+            prefix=$dist_x32
+            copy_built_python_to_dist
         popd > /dev/null
-    fi
 
-    python_exe=$dist_x64/python.exe
-    $python_exe --version > /dev/null
-    if [[ $? == 0 ]]; then
-        echo "Seems we alreadly have a working x64 python at $python_exe"
-    else
         echo "Build python x64 runtimes ..."
         pushd PCbuild > /dev/null
             cmd //c build.bat -e --no-tkinter -p x64
         popd > /dev/null
         pushd PCbuild/amd64 > /dev/null
-            prefix=$dist_x64; copy_built_python_to_dist
+            dist_x64=$python_dir/../x64
+            prefix=$dist_x64
+            copy_built_python_to_dist
         popd > /dev/null
     fi
 
 else
-    # must be absoult path, so we need root_dir here
-    prefix=$root_dir/dist/$os_name
-
     extra_flags=""
     extra_flags="$extra_flags --enable-ipv6"
     extra_flags="$extra_flags --without-ensurepip"
@@ -104,14 +96,13 @@ else
 
     function build_python()
     {
-        ./configure --prefix=$prefix $extra_flags && make -j8 && make -j8 install
+        ./configure --prefix=$python_dir $extra_flags && make -j8 && make -j8 install
         # TODO:
-        pushd $prefix/lib/python$py_version_short/lib-dynload > /dev/null
+        pushd $python_lib_dir/lib-dynload > /dev/null
             rm _test*
             rm _ctypes_test*
         popd > /dev/null
     }
-    python_exe=$root_dir/dist/$os_name/bin/python3
     $python_exe --version > /dev/null
     if [[ $? == 0 ]]; then
         echo "Seems we alreadly have a working python at $python_exe"
