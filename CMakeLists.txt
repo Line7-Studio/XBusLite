@@ -16,33 +16,56 @@ message(STATUS "XBus Python ${xbus_python_executable}")
 include(XBusLite.cmake)
 
 # all unit test
-list(APPEND xbus_unit_test "knock_knock")
-list(APPEND xbus_unit_test "embed_ffi")
-list(APPEND xbus_unit_test "embed_module")
-list(APPEND xbus_unit_test "create_client")
-list(APPEND xbus_unit_test "task_execution")
+list(APPEND xbus_unit_test "B1") # basic, for client creation function
+list(APPEND xbus_unit_test "B2") # basic, for python moudle embed function
+list(APPEND xbus_unit_test "B3") # basic, for excution client embeded python function
+list(APPEND xbus_unit_test "B4") # basic, for excution client embeded ctypes ffi function
 
 # file(TO_NATIVE_PATH ${xbus_python_executable} fixed_xbus_python_executable_path)
 # add_definitions(-DXBUS_PYTHON_EXECUTABLE="${fixed_xbus_python_executable_path}")
 
-add_definitions(-DXBUS_PYTHON_EXECUTABLE=${xbus_python_executable})
-
+set(test_src_dir ${CMAKE_CURRENT_SOURCE_DIR}/test)
 foreach(this ${xbus_unit_test})
-
-    add_executable(${this} test/${this}.cxx)
-    target_sources(${this} PRIVATE test/${this}/${this}.cxx)
+    add_executable(${this} ${test_src_dir}/${this}.cxx)
     xbus_set(${this} SERVER)
 
-    add_executable(${this}_client test/${this}/${this}.cxx)
-    xbus_set(${this}_client CLIENT)
+    if(CMAKE_SYSTEM_NAME STREQUAL Windows)
+        set(client_host_path xbus_client_host/${this}.exe)
+        set(python_runtime_path ${xbus_python_executable}/../python36.dll)
+    else()
+        set(client_host_path xbus_client_host/${this})
+        set(python_runtime_path ${xbus_python_executable})
+    endif()
 
-    set_target_properties(${this}_client PROPERTIES RUNTIME_OUTPUT_DIRECTORY xbus_client_host)
-    set_target_properties(${this}_client PROPERTIES RUNTIME_OUTPUT_NAME ${this})
+    target_compile_definitions(${this} PRIVATE
+                 -DPYTHON_RUNTIME_PATH=${python_runtime_path}
+                 -DCLIENT_HOST_PATH=${client_host_path}
+                 )
 
-    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test/${this}/${this}.py)
-        xbus_embed_source_code(${this}_client
-                        FILE ${CMAKE_CURRENT_SOURCE_DIR}/test/${this}/${this}.py
+    if(EXISTS ${test_src_dir}/python/${this}.py)
+        xbus_embed_source_code(${this}
+                        FILE ${test_src_dir}/python/${this}.py
                         URL ":EmbededSource")
+    endif()
+
+    if(EXISTS ${test_src_dir}/client/${this}.client.cxx)
+        # host
+        target_sources(${this} PRIVATE ${test_src_dir}/client/${this}.client.cxx)
+
+        # client
+        add_executable(${this}_client ${test_src_dir}/client/${this}.client.cxx)
+        xbus_set(${this}_client CLIENT)
+
+        set_target_properties(${this}_client PROPERTIES
+                                RUNTIME_OUTPUT_DIRECTORY xbus_client_host)
+        set_target_properties(${this}_client PROPERTIES
+                                RUNTIME_OUTPUT_NAME ${this})
+
+        if(EXISTS ${test_src_dir}/client/python/${this}.client.py)
+            xbus_embed_source_code(${this}_client
+                            FILE ${test_src_dir}/client/python/${this}.client.py
+                            URL ":EmbededSource")
+        endif()
     endif()
 
     # for gtest

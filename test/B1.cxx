@@ -3,7 +3,7 @@
 #include <gtest/gtest.h>
 
 
-TEST(CreateClient, One)
+TEST(B1, CreatClientOne)
 {
     XBus::CreateClient("Client/A");
 
@@ -16,7 +16,7 @@ TEST(CreateClient, One)
     // std::this_thread::sleep_for(std::chrono::seconds(1));
 }
 
-TEST(CreateClient, Multi)
+TEST(B1, CreateClientMulti)
 {
     XBus::CreateClient("Client/B");
     XBus::CreateClient("Client/C");
@@ -35,7 +35,7 @@ TEST(CreateClient, Multi)
     // std::this_thread::sleep_for(std::chrono::seconds(1));
 }
 
-TEST(CreateClient, RenameClient)
+TEST(B1, CreateClientWithRename)
 {
     XBus::CreateClient("Client/A", "Host/A");
     XBus::CreateClient("Client/B", "Host/B");
@@ -60,26 +60,11 @@ TEST(CreateClient, RenameClient)
     // std::this_thread::sleep_for(std::chrono::seconds(1));
 }
 
-
-
 int main(int argc, char *argv[])
 {
-
-#ifdef XBUS_LITE_PLATFORM_WINDOWS
-    XBus::ClientHostFilePath() = L"xbus_client_host\\create_client.exe";
-#else // Not On Windows
-    XBus::ClientHostFilePath() = "xbus_client_host/create_client";
-#endif // XBUS_LITE_PLATFORM_WINDOWS
-
-#ifdef XBUS_LITE_PLATFORM_WINDOWS
-    auto exe = std::wstring(XBUS_NATIVE_STRINGIFY_MACRO(XBUS_PYTHON_EXECUTABLE));
-    XBus::PythonRuntimeFilePath() = (exe + L"/../python36.dll");
-#else
-    XBus::PythonRuntimeFilePath() = XBUS_NATIVE_STRINGIFY_MACRO(XBUS_PYTHON_EXECUTABLE);
-#endif // XBUS_LITE_PLATFORM_WINDOWS
+    XBus::ClientHostFilePath() = XBUS_NATIVE_STRINGIFY_MACRO(CLIENT_HOST_PATH);
+    XBus::PythonRuntimeFilePath() = XBUS_NATIVE_STRINGIFY_MACRO(PYTHON_RUNTIME_PATH);
 
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
-
-
