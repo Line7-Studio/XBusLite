@@ -21,6 +21,8 @@ list(APPEND xbus_unit_test "B2") # basic, for python moudle embed function
 list(APPEND xbus_unit_test "B3") # basic, for excution client embeded python function
 list(APPEND xbus_unit_test "B4") # basic, for excution client embeded ctypes ffi function
 
+list(APPEND xbus_unit_test "S1") # speed, for check pipe and job queue speed
+
 # file(TO_NATIVE_PATH ${xbus_python_executable} fixed_xbus_python_executable_path)
 # add_definitions(-DXBUS_PYTHON_EXECUTABLE="${fixed_xbus_python_executable_path}")
 

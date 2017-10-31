@@ -3,7 +3,7 @@
 #include <gtest/gtest.h>
 
 
-TEST(S1, Client Speed)
+TEST(S1, Knock)
 {
     XBus::CreateClient("Client", "Speed");
     XBus::WaitClientInitialized("Speed");
