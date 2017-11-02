@@ -133,8 +133,9 @@ function(xbus_set target_name KEYWORD_MODE)
     endif()
 
     # basic settings for the host
-    target_sources(${target_name} PRIVATE ${xbus_lite_dir}/src/XBus.cxx)
     target_sources(${target_name} PRIVATE ${xbus_lite_dir}/src/XBus.hxx)
+    target_sources(${target_name} PRIVATE ${xbus_lite_dir}/src/Detail/XBus.cxx)
+
     target_include_directories(${target_name} PRIVATE ${xbus_lite_dir}/src)
 
     if(${KEYWORD_MODE} STREQUAL "CLIENT")

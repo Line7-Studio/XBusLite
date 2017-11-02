@@ -1,4 +1,4 @@
-#include "XBus.hxx"
+#include <XBus.hxx>
 
 #include <cstddef> // std::ptrdiff_t
 #include <cstring> // std::strlen
