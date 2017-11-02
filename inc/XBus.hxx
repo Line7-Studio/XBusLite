@@ -94,11 +94,6 @@ private:
             std::chrono::duration<long long, std::micro> rep) const;
 };
 
-/*
- store the registered `client_name`->`client_init_function` here
- */
-std::map<str_t, client_init_function_t>& ClientNameToInitFunction();
-
 
 /*
  store the registered `embedded_c_function_name`->`embedded_c_function` here
@@ -107,7 +102,10 @@ std::map<str_t, client_init_function_t>& ClientNameToInitFunction();
 typedef void* embedded_c_function_t;
 std::map<str_t, embedded_c_function_t>& EmbededFunctionNameToFunction();
 
-
+/*
+ store the registered `client_name`->`client_init_function` here
+ */
+std::map<str_t, client_init_function_t>& ClientNameToInitFunction();
 
 /*
   create client with `client_name` mapped init function,

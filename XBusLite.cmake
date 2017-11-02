@@ -133,10 +133,11 @@ function(xbus_set target_name KEYWORD_MODE)
     endif()
 
     # basic settings for the host
-    target_sources(${target_name} PRIVATE ${xbus_lite_dir}/src/XBus.hxx)
-    target_sources(${target_name} PRIVATE ${xbus_lite_dir}/src/Detail/XBus.cxx)
+    target_sources(${target_name} PRIVATE ${xbus_lite_dir}/src/Detail.hxx)
+    target_sources(${target_name} PRIVATE ${xbus_lite_dir}/src/Detail.cxx)
+    target_sources(${target_name} PRIVATE ${xbus_lite_dir}/src/Python.cxx)
 
-    target_include_directories(${target_name} PRIVATE ${xbus_lite_dir}/src)
+    target_include_directories(${target_name} PRIVATE ${xbus_lite_dir}/inc)
 
     if(${KEYWORD_MODE} STREQUAL "CLIENT")
         target_compile_definitions(${target_name} PRIVATE XBUS_SOURCE_FOR_CLIENT_HOST)

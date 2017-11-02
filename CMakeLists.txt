@@ -23,8 +23,6 @@ list(APPEND xbus_unit_test "B4") # basic, for excution client embeded ctypes ffi
 
 list(APPEND xbus_unit_test "S1") # speed, for check pipe and job queue speed
 
-# file(TO_NATIVE_PATH ${xbus_python_executable} fixed_xbus_python_executable_path)
-# add_definitions(-DXBUS_PYTHON_EXECUTABLE="${fixed_xbus_python_executable_path}")
 
 set(test_src_dir ${CMAKE_CURRENT_SOURCE_DIR}/test)
 foreach(this ${xbus_unit_test})
