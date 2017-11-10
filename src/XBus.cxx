@@ -1209,13 +1209,16 @@ bool Python::Eval(const std::string& source)
 bool Python::Eval(const EmbededSourceLoader& source_loader)
 {
     auto source_url = source_loader.url();
+    auto source_url_size = source_url.size();
 
     size_t source_code_index = 0;
     for ( ; source_code_index < SourceCodeItemCount; ++source_code_index)
     {
         auto name_buffer = SourceCodeNameBlockBuffer[source_code_index];
         auto name_size = SourceCodeNameBlockBufferSize[source_code_index];
-        if( source_url.compare(0, name_size, name_buffer) == 0 ){
+        if( (source_url_size == name_size) && \
+            (source_url.compare(0, name_size, name_buffer) == 0) )
+        {
             break;
         }
     }
