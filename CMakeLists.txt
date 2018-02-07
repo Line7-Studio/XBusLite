@@ -64,8 +64,8 @@ if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
     add_definitions(-DUNICODE)
     add_definitions(-D_UNICODE)
 
-    set(C_FLAGS_COMM "/nologo /Zc:wchar_t- /Zc:strictStrings /MP /W3")
-    set(CXX_FLAGS_COMM "/nologo /Zc:wchar_t- /Zc:strictStrings /MP /W3 /GR /EHsc")
+    set(C_FLAGS_COMM "/nologo /Zc:strictStrings /MP /W3")
+    set(CXX_FLAGS_COMM "/nologo /Zc:strictStrings /MP /W3 /GR /EHsc")
 
     # enable c++14
     set(CXX_FLAGS_COMM "${CXX_FLAGS_COMM} /std:c++14")
